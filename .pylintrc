@@ -1,0 +1,12 @@
+
+[MESSAGES CONTROL]
+disable=import-error,
+        invalid-name, 
+        non-ascii-name, 
+        missing-function-docstring, 
+        missing-module-docstring, 
+        missing-class-docstring,
+        line-too-long,
+        dangerous-default-value,
+        line-too-long,
+        unnecessary-lambda
