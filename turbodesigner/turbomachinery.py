@@ -137,6 +137,7 @@ class Turbomachinery:
 
         inlet_flow_station = self.inlet_flow_station
         stages: list[Stage] = []
+        # TODO: make this more efficient with Numba
         for i in range(self.N_stg):
             stage = Stage(
                Delta_T0=self.Delta_T0_stg[i],

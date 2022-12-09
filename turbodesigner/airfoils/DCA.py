@@ -1,7 +1,6 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import plotly.graph_objects as go
 import numpy as np
-import numpy.typing as npt
 from scipy import stats
 
 @dataclass
