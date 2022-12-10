@@ -33,8 +33,7 @@ class DCAAirfoilTest(unittest.TestCase):
             [-4.94023275e-01,  1.28171276e-02],
         ])
         
-        equals = np.allclose(actual_coords, expected_coords)
-        self.assertTrue(equals)
+        np.testing.assert_allclose(actual_coords, expected_coords)
 
 
     def test_negative_regular_camber(self):
@@ -65,8 +64,8 @@ class DCAAirfoilTest(unittest.TestCase):
             [-4.94023275e-01, -1.28171276e-02]
         ])
         
-        equals = np.allclose(actual_coords, expected_coords)
-        self.assertTrue(equals)
+        np.testing.assert_allclose(actual_coords, expected_coords)
+
 
     def test_positive_low_camber(self):
         c = 1
@@ -96,8 +95,8 @@ class DCAAirfoilTest(unittest.TestCase):
             [-4.90909610e-01,  1.08335044e-02]
         ])
         
-        equals = np.allclose(actual_coords, expected_coords)
-        self.assertTrue(equals)
+        np.testing.assert_allclose(actual_coords, expected_coords)
+
 
     def test_negative_low_camber(self):
         c = 1
@@ -127,5 +126,4 @@ class DCAAirfoilTest(unittest.TestCase):
             [-4.90909610e-01, -1.08335044e-02]
         ])
         
-        equals = np.allclose(actual_coords, expected_coords)
-        self.assertTrue(equals)
+        np.testing.assert_allclose(actual_coords, expected_coords)

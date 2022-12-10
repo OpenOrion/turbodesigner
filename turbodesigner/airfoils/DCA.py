@@ -3,6 +3,8 @@ import plotly.graph_objects as go
 import numpy as np
 from scipy import stats
 
+from turbodesigner.airfoils.common import get_staggered_coords
+
 @dataclass
 class DCAAirfoil:
     c: float
@@ -16,6 +18,9 @@ class DCAAirfoil:
 
     tb: float
     "max thickness (length)"
+
+    xi: float = 0
+    "stagger angle (rad)"
 
     def __post_init__(self):
         self.theta_mag = np.abs(self.theta)
@@ -38,7 +43,9 @@ class DCAAirfoil:
         # vertical position of camber or chord line (length)
         yc = yc0 + np.sqrt(Rc**2 - xc**2) * np.sign(self.theta)
 
-        return np.array([xc,yc]).T
+        camber_line = np.array([xc,yc]).T
+
+        return get_staggered_coords(camber_line, self.xi)
 
     def get_circle(self, is_left: bool, num_points: int):
         """coordinates of circle for DCA airfoil (length)
@@ -113,6 +120,8 @@ class DCAAirfoil:
                 number of circle points
 
         """
+        # Info: x coordinates are [:,0] and y coordinates are [:,1]
+
         # Circles
         left_circle = self.get_circle(is_left=True, num_points=num_circle_points)
         right_circle = self.get_circle(is_left=False, num_points=num_circle_points)
@@ -125,7 +134,7 @@ class DCAAirfoil:
         upper_cond = np.where(np.logical_and(upper_arc[:,0] > left_circle[0,0], upper_arc[:,0] < right_circle[-1,0]))
         lower_cond = np.where(np.logical_and(lower_arc[:,0] > left_circle[-1,0], lower_arc[:,0] < right_circle[0,0]))
         
-        return np.concatenate(
+        airfoil = np.concatenate(
             [
                 left_circle, 
                 lower_arc[lower_cond],
@@ -134,6 +143,8 @@ class DCAAirfoil:
                 left_circle_start
             ]
         )
+
+        return get_staggered_coords(airfoil, self.xi)
 
     def visualize(
         self,

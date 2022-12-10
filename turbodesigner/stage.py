@@ -2,8 +2,9 @@ from functools import cached_property
 from dataclasses import dataclass
 from typing import Optional
 import numpy as np
-from turbodesigner.blade import BladeRow, BladeRowExport
-from turbodesigner.flow_station import FlowCalculations, FlowStation
+from turbodesigner.blade.row import BladeRow, BladeRowExport
+from turbodesigner.blade.vortex.free_vortex import FreeVortex
+from turbodesigner.flow_station import FluidMechanics, FlowStation
 
 
 @dataclass
@@ -25,6 +26,9 @@ class StageExport:
 @dataclass
 class Stage:
     "calculates turbomachinery stage"
+
+    stage_number: int
+    "stage number"
 
     Delta_T0: float
     "stage stagnation temperature change between inlet and outlet (K)"
@@ -53,6 +57,9 @@ class Stage:
     next_stage: Optional["Stage"] = None
     "next turbomachinery stage"
 
+    def __post_init__(self):
+        assert isinstance(self.inlet_flow_station.radius, float)
+        self.rm = self.inlet_flow_station.radius
 
     @cached_property
     def Delta_h(self) -> float:
@@ -62,28 +69,31 @@ class Stage:
     @cached_property
     def U(self):
         "mean blade velocity (m/s)"
-        return FlowCalculations.U(self.inlet_flow_station.N, self.inlet_flow_station.radius)
+        U = FluidMechanics.U(self.inlet_flow_station.N, self.rm)
+        assert isinstance(U, float)
+        return U
 
     @cached_property
     def phi(self):
         "flow coefficient (dimensionless)"
-        return FlowCalculations.phi(self.inlet_flow_station.Vm, self.U)
+        phi = FluidMechanics.phi(self.inlet_flow_station.Vm, self.U)
+        assert isinstance(phi, float)
+        return phi
 
     @cached_property
     def psi(self):
         "loading coefficient (dimensionless)"
-        assert isinstance(self.U, float)
         return self.Delta_h/self.U**2
 
     @cached_property
     def alpha1(self):
         "absolute inlet flow angle (rad)"
-        return FlowCalculations.alpha1(self.psi, self.R, self.phi)
+        return FluidMechanics.alpha1(self.psi, self.R, self.phi)
 
     @cached_property
     def alpha2(self):
         "absolute outlet flow angle (rad)"
-        return FlowCalculations.alpha2(self.psi, self.R, self.phi)
+        return FluidMechanics.alpha2(self.psi, self.R, self.phi)
 
     @cached_property
     def T02(self):
@@ -112,11 +122,22 @@ class Stage:
         return self.T02/self.inlet_flow_station.T0
 
     @cached_property
+    def vortex(self):
+        return FreeVortex(
+            Um=self.U, 
+            Vm=self.inlet_flow_station.Vm, 
+            Rm=self.R, 
+            phi_m=self.phi, 
+            psi_m=self.psi, 
+            rm=self.rm
+        )
+
+    @cached_property
     def rotor(self):
         return BladeRow(
+            stage_number=self.stage_number,
             stage_flow_station=self.inlet_flow_station,
-            Rc=self.R,
-            psi=self.psi,
+            vortex=self.vortex,
             AR=self.AR.rotor,
             sc=self.sc.rotor,
             tbc=self.tbc.rotor,
@@ -127,13 +148,20 @@ class Stage:
     @cached_property
     def stator(self):
         return BladeRow(
+            stage_number=self.stage_number,
             stage_flow_station=self.outlet_flow_station,
-            Rc=self.R,
-            psi=self.psi,
+            vortex=self.vortex,
             AR=self.AR.stator,
             sc=self.sc.stator,
             tbc=self.tbc.stator,
-            is_rotating=True,
+            is_rotating=False,
             N_stream=self.N_stream,
             next_blade_row=None if self.next_stage is None else self.next_stage.rotor
+        )
+
+    def to_export(self):
+        return StageExport(
+            stage_number=self.stage_number,
+            rotor=self.rotor.to_export(),
+            stator=self.stator.to_export(),
         )

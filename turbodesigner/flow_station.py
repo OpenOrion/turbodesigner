@@ -5,7 +5,7 @@ from typing import Optional
 import numpy as np
 import inspect
 
-class ThermodynamicsCalculations:
+class Thermodynamics:
     @staticmethod
     def Cp(gamma: float, Rs: float):
         """specific heat at constant pressure (J/(kg*K))
@@ -22,7 +22,7 @@ class ThermodynamicsCalculations:
         """
         return Rs*gamma/(gamma - 1)
 
-class FlowCalculations:
+class FluidMechanics:
     @staticmethod
     def alpha1(psi: float, R: float | np.ndarray, phi: float | np.ndarray):
         """absolute flow angle at the rotor's inlet (rad)
@@ -39,7 +39,7 @@ class FlowCalculations:
         phi: float | np.ndarray
             flow coefficient (dimensionless)
         """
-        return np.arctan((-1/2*psi - R + 1)/phi)
+        return np.arctan((1 - R + -(1/2)*psi)/phi)
 
     @staticmethod
     def beta1(psi: float, R: float | np.ndarray, phi: float | np.ndarray):
@@ -94,7 +94,7 @@ class FlowCalculations:
             flow coefficient (dimensionless)
         """
 
-        return np.arctan(((1/2)*psi - R + 1)/phi)
+        return np.arctan((1 - R + (1/2)*psi)/phi)
 
     @staticmethod
     def U(N: float, r: float | np.ndarray | np.ndarray):
@@ -187,7 +187,7 @@ class FlowStation:
     @cached_property
     def Cp(self):
         "specific heat at constant pressure (J/(kg*K))"
-        return ThermodynamicsCalculations.Cp(self.gamma, self.Rs)
+        return Thermodynamics.Cp(self.gamma, self.Rs)
 
     @cached_property
     def T(self):
@@ -236,11 +236,11 @@ class FlowStation:
     @cached_property
     def U(self):
         "blade velocity (m/s)"
-        return FlowCalculations.U(self.N, self.radius)
+        return FluidMechanics.U(self.N, self.radius)
 
     @cached_property
     def ctheta(self):
-        "absolute tangential velocity at the rotor's inlet (m/s)"
+        "absolute tangential velocity (m/s)"
         return self.Vm*np.tan(self.alpha)
 
     @cached_property
