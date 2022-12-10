@@ -140,6 +140,7 @@ class Turbomachinery:
         # TODO: make this more efficient with Numba
         for i in range(self.N_stg):
             stage = Stage(
+               stage_number=i+1,
                Delta_T0=self.Delta_T0_stg[i],
                R=self.R_stg[i],
                inlet_flow_station=inlet_flow_station,
@@ -155,3 +156,10 @@ class Turbomachinery:
             stages.append(stage)
         
         return stages
+
+    def to_export(self):
+        return TurbomachinerExport(
+            stages = [
+                stage.to_export() for stage in self.stages
+            ]
+        )
