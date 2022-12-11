@@ -3,130 +3,8 @@ from functools import cached_property
 from dataclasses import dataclass
 from typing import Optional
 import numpy as np
-import inspect
 
-class Thermodynamics:
-    @staticmethod
-    def Cp(gamma: float, Rs: float):
-        """specific heat at constant pressure (J/(kg*K))
-                
-        Parameters
-        ==========
-
-        gamma: float
-            ratio of specific heats (dimensionless)
-
-        Rs: float
-            specific gas constant (J/(kg*K))
-
-        """
-        return Rs*gamma/(gamma - 1)
-
-class FluidMechanics:
-    @staticmethod
-    def alpha1(psi: float, R: float | np.ndarray, phi: float | np.ndarray):
-        """absolute flow angle at the rotor's inlet (rad)
-        
-        Parameters
-        ==========
-
-        psi: float
-            loading coefficient (dimensionless)
-
-        reaction: float
-            reaction rate (dimensionless)
-
-        phi: float | np.ndarray
-            flow coefficient (dimensionless)
-        """
-        return np.arctan((1 - R + -(1/2)*psi)/phi)
-
-    @staticmethod
-    def beta1(psi: float, R: float | np.ndarray, phi: float | np.ndarray):
-        """relative flow angle at the rotor inlet (rad)
-        
-        Parameters
-        ==========
-
-        psi: float
-            loading coefficient (dimensionless)
-
-        reaction: float
-            reaction rate (dimensionless)
-
-        phi: float | np.ndarray
-            flow coefficient (dimensionless)
-        """
-        return np.arctan((1/2*psi + R)/phi)
-
-    @staticmethod
-    def beta2(psi: float, R: float | np.ndarray, phi: float | np.ndarray):
-        """relative flow angle at the stator inlet (rad)
-        
-        Parameters
-        ==========
-
-        psi: float
-            loading coefficient (dimensionless)
-
-        reaction: float
-            reaction rate (dimensionless)
-
-        phi: float | np.ndarray
-            flow coefficient (dimensionless)
-        """
-        return np.arctan((-1/2*psi + R)/phi)
-
-    @staticmethod
-    def alpha2(psi: float, R: float | np.ndarray, phi: float | np.ndarray):
-        """absolute flow angle at the stator inlet (rad)
-        
-        Parameters
-        ==========
-
-        psi: float
-            loading coefficient (dimensionless)
-
-        reaction: float
-            reaction rate (dimensionless)
-
-        phi: float | np.ndarray
-            flow coefficient (dimensionless)
-        """
-
-        return np.arctan((1 - R + (1/2)*psi)/phi)
-
-    @staticmethod
-    def U(N: float, r: float | np.ndarray | np.ndarray):
-        """blade velocity (m/s)
-        
-        Parameters
-        ==========
-
-        N: float
-            rotational speed (rpm)
-
-        r: float | np.ndarray | np.ndarray
-            radius (m)
-        """
-        return (1/30)*np.pi*N*r
-
-    @staticmethod
-    def phi(Vm: float, U: float | np.ndarray):
-        """flow coefficient (dimensionless)
-        
-        Parameters
-        ==========
-
-        Vm: float
-            meridional flow velocity (m/s)
-
-        U: float | np.ndarray
-            blade velocity (m/s)
-    
-        """
-        return Vm/U
-
+PROP_NON_STREAM_ERROR = "Property not allowed with streams"
 
 @dataclass
 class FlowStation:
@@ -147,7 +25,7 @@ class FlowStation:
     Vm: float
     "meridional flow velocity (m/s)"
 
-    mdot: float
+    mdot: float = np.nan
     "mass flow rate (kg/s)"
 
     B: float = 0.0
@@ -162,6 +40,9 @@ class FlowStation:
     radius: float | np.ndarray = np.nan
     "flow radius (m)"
 
+    is_stream: bool = False
+    "whether station is 1D stream"
+
     def copyFlow(
         self, 
         T0: Optional[float] = None,
@@ -170,7 +51,7 @@ class FlowStation:
         alpha: Optional[float | np.ndarray] = None,
         radius: Optional[float | np.ndarray] = None,
     ):
-        "copies FlowStation (FlowStation)"
+        "copies all elements of FlowStation (FlowStation)"
         return FlowStation(
             gamma=self.gamma,
             Rs=self.Rs,
@@ -184,10 +65,33 @@ class FlowStation:
             radius=self.radius if radius is None else radius
         )
 
+    def copyStream(
+        self, 
+        alpha: Optional[float | np.ndarray] = None,
+        radius: Optional[float | np.ndarray] = None,
+    ):
+        """copies stream elements of FlowStation (FlowStation)
+           
+           excludes:
+                * mdot - mass flow rate
+
+        """
+        return FlowStation(
+            gamma=self.gamma,
+            Rs=self.Rs,
+            T0=self.T0,
+            P0=self.P0,
+            Vm=self.Vm,
+            alpha=self.alpha if alpha is None else alpha,
+            N=self.N,
+            radius=self.radius if radius is None else radius,
+            is_stream=True
+        )
+
     @cached_property
     def Cp(self):
         "specific heat at constant pressure (J/(kg*K))"
-        return Thermodynamics.Cp(self.gamma, self.Rs)
+        return self.Rs*self.gamma/(self.gamma - 1)
 
     @cached_property
     def T(self):
@@ -225,6 +129,7 @@ class FlowStation:
     @cached_property
     def A_flow(self):
         "cross-sectional flow area (m**2)"
+        assert not self.is_stream, PROP_NON_STREAM_ERROR
         return self.mdot/(self.rho*self.Vm)
 
     @cached_property
@@ -236,7 +141,7 @@ class FlowStation:
     @cached_property
     def U(self):
         "blade velocity (m/s)"
-        return FluidMechanics.U(self.N, self.radius)
+        return (1/30)*np.pi*self.N*self.radius
 
     @cached_property
     def ctheta(self):
@@ -267,11 +172,13 @@ class FlowStation:
     @cached_property
     def outer_radius(self):
         "flow outer radius (m)"
+        assert not self.is_stream, PROP_NON_STREAM_ERROR
         return self.A_phys/(4*np.pi*self.radius) + self.radius
 
     @cached_property
     def inner_radius(self):
         "flow inner radius (m)"
+        assert not self.is_stream, PROP_NON_STREAM_ERROR
         return 2*self.radius - self.outer_radius
 
     def set_radius(self, ht: float):

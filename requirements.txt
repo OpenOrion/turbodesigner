@@ -5,3 +5,7 @@ numba
 plotly==5.11.0
 ipywidgets>=7.6
 jupyterlab>=3
+cadquery
+dacite
+jupyter-cadquery==3.4.0 
+cadquery-massembly==1.0.0rc0

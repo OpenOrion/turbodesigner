@@ -1,0 +1,46 @@
+{
+    "gamma": 1.4,              
+    "cx": 150,                 
+    "N": 15000,                
+    "Rs": 287,                 
+    "mdot": 20,                
+    "PR": 4.15,                
+    "P01": 101000,             
+    "T01": 288,                
+    "eta_isen": 0.87848151,    
+    "N_stg": 7,                
+    "Delta_T0_stg": [20, 25, 25, 25, 25, 25, 20],    
+    "R_stg": [0.874, 0.7, 0.5, 0.5, 0.5, 0.5, 0.5],  
+    "B_in": 0,                 
+    "B_out": 0,                
+    "ht": 0.5,                 
+    "N_stream": 3,             
+    "AR": [
+        {"rotor": 0.5, "stator": 0.5},
+        {"rotor": 0.5, "stator": 0.5},
+        {"rotor": 0.5, "stator": 0.5},
+        {"rotor": 0.5, "stator": 0.5},
+        {"rotor": 0.5, "stator": 0.5},
+        {"rotor": 0.5, "stator": 0.5},
+        {"rotor": 0.5, "stator": 0.5}
+    ],
+    "sc": [
+        {"rotor": 1.0, "stator": 1.0},
+        {"rotor": 1.0, "stator": 1.0},
+        {"rotor": 1.0, "stator": 1.0},
+        {"rotor": 1.0, "stator": 1.0},
+        {"rotor": 1.0, "stator": 1.0},
+        {"rotor": 1.0, "stator": 1.0},
+        {"rotor": 1.0, "stator": 1.0}
+    ],
+    "tbc": [
+        {"rotor": 0.1, "stator": 0.1},
+        {"rotor": 0.1, "stator": 0.1},
+        {"rotor": 0.1, "stator": 0.1},
+        {"rotor": 0.1, "stator": 0.1},
+        {"rotor": 0.1, "stator": 0.1},
+        {"rotor": 0.1, "stator": 0.1},
+        {"rotor": 0.1, "stator": 0.1}
+    ]
+}
+

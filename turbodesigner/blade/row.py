@@ -1,7 +1,7 @@
 from enum import Enum
 from functools import cached_property
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional
 from turbodesigner.airfoils import AirfoilType, DCAAirfoil
 from turbodesigner.blade.deviation import BladeDeviation
 from turbodesigner.blade.metal_angles import MetalAngles
@@ -67,11 +67,18 @@ class BladeRow:
     N_stream: int
     "number of streams per blade (dimensionless)"
 
-    next_blade_row: Optional["BladeRow"] = None
-    "next blade row"
+    next_flow_station: Optional["FlowStation"] = None
+    "next blade row flow station"
 
     deviation_iterations: int = 20
     "nominal deviation iterations"
+
+    def __post_init__(self):
+        if self.is_rotating and self.next_flow_station is None:
+            self.next_flow_station = self.stage_flow_station.copyStream(
+                alpha=self.vortex.alpha(self.radii, is_rotating=False),
+                radius=self.radii
+            )
 
     @cached_property
     def rt(self):
@@ -158,21 +165,9 @@ class BladeRow:
         return np.linspace(self.rh, self.rt, self.N_stream, endpoint=True)
 
     @cached_property
-    def airfoils(self):
-        "blade airfoils coordinates (m)"
-        r0 = self.tb * 0.1
-        # TODO: optimize this with Numba
-        return np.array([
-            DCAAirfoil(self.c, self.metal_angles.theta[i], r0, self.tb, self.metal_angles.xi[i]).get_coords() 
-            for i in range(self.N_stream)
-        ])
-
-    @cached_property
     def flow_station(self):
         "flow station (FlowStation)"
-        mdot_stream = self.stage_flow_station.mdot / self.N_stream
-        return self.stage_flow_station.copyFlow(
-            mdot=mdot_stream,
+        return self.stage_flow_station.copyStream(
             alpha=self.vortex.alpha(self.radii, self.is_rotating),
             radius=self.radii
         )
@@ -188,12 +183,22 @@ class BladeRow:
     def beta2(self):
         "blade outlet flow angle (rad)"
         if self.is_rotating:
-            return self.flow_station.beta  # beta2
+            assert self.next_flow_station is not None
+            return self.next_flow_station.beta                      # beta2
         
-        assert self.next_blade_row is not None or self.vortex.Rm == 0.5, "next_blade_row needs to be defined or Rc=0.5"
-        if self.next_blade_row is not None:
-            return self.next_blade_row.flow_station.alpha   # alpha3
-        return self.flow_station.alpha                      # alpha3
+        assert self.next_flow_station is not None or self.vortex.Rm == 0.5, "next_flow_station needs to be defined or Rc=0.5"
+        if self.next_flow_station is not None:
+            return self.next_flow_station.alpha                     # alpha3
+        return self.vortex.alpha(self.radii, is_rotating=False)     # alpha3
+
+    @cached_property
+    def airfoils(self):
+        r0 = self.tb * 0.1
+        # TODO: optimize this with Numba
+        return [
+            DCAAirfoil(self.c, self.metal_angles.theta[i], r0, self.tb, self.metal_angles.xi[i])
+            for i in range(self.N_stream)
+        ]
 
     def to_export(self):
         return BladeRowExport(
@@ -202,7 +207,7 @@ class BladeRow:
             hub_radius=self.rh * MM,
             tip_radius=self.rt * MM,
             radii=self.radii * MM,
-            airfoils=self.airfoils * MM,
+            airfoils=np.array([airfoil.get_coords() for airfoil in self.airfoils]) * MM,
             number_of_blades=self.Z,
             is_rotating=self.is_rotating,
         )
