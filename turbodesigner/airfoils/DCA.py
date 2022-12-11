@@ -22,6 +22,9 @@ class DCAAirfoil:
     xi: float = 0
     "stagger angle (rad)"
 
+    arc_weight: float = 0.8
+    "percentage of how much of x coordinates to load for arc"
+
     def __post_init__(self):
         self.theta_mag = np.abs(self.theta)
 
@@ -83,11 +86,7 @@ class DCAAirfoil:
         r0 = input_sign*self.r0
         tb = input_sign*self.tb
 
-        # x values weighted in center
-        distribution = stats.norm(loc=0, scale=0.20)
-        bounds = distribution.cdf([-self.c/2, self.c/2])
-        percentage_points = np.linspace(*bounds, num=num_points)
-        x = distribution.ppf(percentage_points)
+        x = np.linspace(-self.c*self.arc_weight/2, self.c*self.arc_weight/2, num=num_points)
 
         # camberline coordinate at mid coord (length)
         ym = (self.c/2)*np.tan(self.theta_mag/4)

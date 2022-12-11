@@ -4,7 +4,7 @@ from typing import Optional
 import numpy as np
 from turbodesigner.blade.row import BladeRow, BladeRowExport
 from turbodesigner.blade.vortex.free_vortex import FreeVortex
-from turbodesigner.flow_station import FluidMechanics, FlowStation
+from turbodesigner.flow_station import FlowStation
 
 
 @dataclass
@@ -60,6 +60,7 @@ class Stage:
     def __post_init__(self):
         assert isinstance(self.inlet_flow_station.radius, float)
         self.rm = self.inlet_flow_station.radius
+        self.N = self.inlet_flow_station.N
 
     @cached_property
     def Delta_h(self) -> float:
@@ -69,16 +70,12 @@ class Stage:
     @cached_property
     def U(self):
         "mean blade velocity (m/s)"
-        U = FluidMechanics.U(self.inlet_flow_station.N, self.rm)
-        assert isinstance(U, float)
-        return U
+        return (1/30)*np.pi*self.N*self.rm
 
     @cached_property
     def phi(self):
         "flow coefficient (dimensionless)"
-        phi = FluidMechanics.phi(self.inlet_flow_station.Vm, self.U)
-        assert isinstance(phi, float)
-        return phi
+        return self.inlet_flow_station.Vm/self.U
 
     @cached_property
     def psi(self):
@@ -88,12 +85,12 @@ class Stage:
     @cached_property
     def alpha1(self):
         "absolute inlet flow angle (rad)"
-        return FluidMechanics.alpha1(self.psi, self.R, self.phi)
+        return np.arctan((1 - self.R + -(1/2)*self.psi)/self.phi)
 
     @cached_property
     def alpha2(self):
         "absolute outlet flow angle (rad)"
-        return FluidMechanics.alpha2(self.psi, self.R, self.phi)
+        return np.arctan((1 - self.R + (1/2)*self.psi)/self.phi)
 
     @cached_property
     def T02(self):
@@ -143,6 +140,7 @@ class Stage:
             tbc=self.tbc.rotor,
             is_rotating=True,
             N_stream=self.N_stream,
+            next_flow_station=self.stator.flow_station
         )
 
     @cached_property
@@ -156,7 +154,7 @@ class Stage:
             tbc=self.tbc.stator,
             is_rotating=False,
             N_stream=self.N_stream,
-            next_blade_row=None if self.next_stage is None else self.next_stage.rotor
+            next_flow_station=None if self.next_stage is None else self.next_stage.rotor.flow_station
         )
 
     def to_export(self):

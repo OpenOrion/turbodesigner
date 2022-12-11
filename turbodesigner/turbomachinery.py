@@ -1,8 +1,10 @@
 from functools import cached_property
 from dataclasses import dataclass
+import json
 import numpy as np
 from turbodesigner.flow_station import FlowStation
 from turbodesigner.stage import Stage, StageBladeProperty, StageExport
+from dacite.core import from_dict
 
 @dataclass
 class TurbomachinerExport:
@@ -41,10 +43,10 @@ class Turbomachinery:
     N_stg: int
     "number of stages (dimensionless)"
 
-    Delta_T0_stg: np.ndarray
+    Delta_T0_stg: list[float]
     "array of stage stagnation temperature change between inlet and outlet (K)"
 
-    R_stg: np.ndarray
+    R_stg: list[float]
     "array of stage reaction rates (dimensionless)"
 
     B_in: float
@@ -163,3 +165,14 @@ class Turbomachinery:
                 stage.to_export() for stage in self.stages
             ]
         )
+    
+    @staticmethod
+    def from_dict(obj) -> "Turbomachinery":
+        return from_dict(data_class=Turbomachinery, data=obj)
+
+
+    @staticmethod
+    def from_file(file_name: str) -> "Turbomachinery":
+        with open(file_name, "r") as fp:
+            obj = json.load(fp)
+        return from_dict(data_class=Turbomachinery, data=obj)
