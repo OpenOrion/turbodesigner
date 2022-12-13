@@ -24,8 +24,8 @@ class BladeDeviation:
     "airfoil type (AirfoilType)"
 
     def __post_init__(self):
-        self.beta1_deg = np.degrees(self.beta1)
-        self.beta2_deg = np.degrees(self.beta2)
+        self.beta1_deg = np.abs(np.degrees(self.beta1))
+        self.beta2_deg = np.abs(np.degrees(self.beta2))
 
     @cached_property
     def Ksh(self):
@@ -91,9 +91,10 @@ class BladeDeviation:
         # TODO: make this more efficient with Numba
         for _ in range(iterations):
             metal_angles_deg = MetalAngles(beta1_deg, beta2_deg, i_star_deg, delta_star_deg)
-            theta_deg = metal_angles_deg.theta
+            theta_deg = np.abs(metal_angles_deg.theta)
             i_star_deg = self.get_i_star_deg(theta_deg)
             delta_star_deg = self.get_delta_star_deg(theta_deg)
-        i = np.radians(i_star_deg)
-        delta = np.radians(delta_star_deg)
+            
+        i = np.radians(i_star_deg) * np.sign(self.beta1)
+        delta = np.radians(delta_star_deg) * np.sign(self.beta2)
         return MetalAngles(self.beta1, self.beta2, i, delta)

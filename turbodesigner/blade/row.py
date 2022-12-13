@@ -157,7 +157,7 @@ class BladeRow:
     def metal_angles(self):
         # metal_angles = self.deviation.get_metal_angles(self.deviation_iterations)
         # return metal_angles
-        return MetalAngles(self.beta1, self.beta2, i=0, delta=0)
+        return self.deviation.get_metal_angles(self.deviation_iterations)
 
     @cached_property
     def radii(self):
