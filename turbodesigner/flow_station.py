@@ -10,19 +10,19 @@ PROP_NON_STREAM_ERROR = "Property not allowed with streams"
 class FlowStation:
     "calculates flow station"
 
-    gamma: float
+    gamma: float = np.nan
     "ratio of specific heats (dimensionless)"
 
-    Rs: float
+    Rs: float = np.nan
     "specific gas constant (J/(kg*K))"
 
-    T0: float
+    T0: float = np.nan
     "stagnation temperature (K)"
 
-    P0: float
+    P0: float = np.nan
     "stagnation pressure (Pa)"
 
-    Vm: float
+    Vm: float = np.nan
     "meridional flow velocity (m/s)"
 
     mdot: float = np.nan
@@ -141,7 +141,7 @@ class FlowStation:
     @cached_property
     def U(self):
         "blade velocity (m/s)"
-        return (1/30)*np.pi*self.N*self.radius
+        return 2*np.pi*self.N*self.radius/60
 
     @cached_property
     def ctheta(self):

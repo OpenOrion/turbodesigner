@@ -1,11 +1,11 @@
 import unittest
-from turbodesigner.blade.row import BladeDeviation, AirfoilType
+from turbodesigner.blade.deviation.johnson import JohnsonBladeDeviation, AirfoilType
 import numpy as np
 
 class AungierDeviationTest(unittest.TestCase):
 
     def test_aungier_deviation(self):
-        deviation = BladeDeviation(
+        deviation = JohnsonBladeDeviation(
             beta1=np.radians(70),               # rad
             beta2=np.radians(20),               # rad
             sigma=2.0,                          # dimensionless

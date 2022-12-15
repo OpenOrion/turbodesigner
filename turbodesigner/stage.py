@@ -127,7 +127,6 @@ class Stage:
             Um=self.U, 
             Vm=self.inlet_flow_station.Vm, 
             Rm=self.R, 
-            phi_m=self.phi, 
             psi_m=self.psi, 
             rm=self.rm
         )

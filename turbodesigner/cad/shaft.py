@@ -39,11 +39,11 @@ class ShaftCadModel:
 
             .add(
                 cq.Workplane("XY")
-                .polarArray(0, 0, 360, stage.rotor.number_of_blades)
+                .polarArray(stage.rotor.hub_radius, 0, 360, stage.rotor.number_of_blades)
                 .eachpoint(
                     lambda loc: (
                         rotor_blade
-                        .translate((-blade_height_offset,0,stage.rotor.hub_radius))
+                        .translate((-blade_height_offset,0,0))
                         .rotate((0,0,0), (0,1,0), 90)
                     ).val().located(loc), True)  # type: ignore
             )

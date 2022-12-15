@@ -2,11 +2,10 @@ from dataclasses import dataclass
 from functools import cached_property
 import numpy as np
 from turbodesigner.airfoils import AirfoilType
-
 from turbodesigner.blade.metal_angles import MetalAngles
 
 @dataclass
-class BladeDeviation:
+class JohnsonBladeDeviation:
 
     beta1: float | np.ndarray
     "inlet flow angle (rad)"
@@ -87,11 +86,10 @@ class BladeDeviation:
 
     def get_metal_angles(self, iterations: int):
         i_star_deg, delta_star_deg = 0, 0
-        beta1_deg, beta2_deg = self.beta1_deg, self.beta2_deg 
         # TODO: make this more efficient with Numba
         for _ in range(iterations):
-            metal_angles_deg = MetalAngles(beta1_deg, beta2_deg, i_star_deg, delta_star_deg)
-            theta_deg = np.abs(metal_angles_deg.theta)
+            metal_angles_deg = MetalAngles(self.beta1_deg, self.beta2_deg, i_star_deg, delta_star_deg)
+            theta_deg = metal_angles_deg.theta
             i_star_deg = self.get_i_star_deg(theta_deg)
             delta_star_deg = self.get_delta_star_deg(theta_deg)
             

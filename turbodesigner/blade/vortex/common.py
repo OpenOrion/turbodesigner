@@ -13,19 +13,19 @@ class Vortex:
     Rm: float
     "mean reaction rate (dimensionless)"
 
-    phi_m: float
-    "mean flow coefficient (dimensionless)"
-
     psi_m: float
     "mean loading coefficient (dimensionless)"
 
     rm: float
     "mean radius (m)"
 
-    def ctheta(self, r: np.ndarray, is_rotating: bool):
+    def __post_init__(self):
+        self.phi_m = self.Vm/self.Um
+
+    def ctheta(self, r: np.ndarray | float, is_rotating: bool):
         "absolute tangential velocity (m/s)"
         return np.nan
 
-    def alpha(self, r: np.ndarray, is_rotating: bool):
+    def alpha(self, r: np.ndarray | float, is_rotating: bool):
         "absolute flow angle (rad)"
         return np.arctan(self.ctheta(r, is_rotating)/self.Vm)

@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from functools import cached_property
+from typing import Optional
 import plotly.graph_objects as go
 import numpy as np
 from scipy import stats
@@ -28,27 +30,32 @@ class DCAAirfoil:
     def __post_init__(self):
         self.theta_mag = np.abs(self.theta)
 
-    def get_camber_line(self, num_points = 20):
+    @cached_property
+    def center(self):
+        return self.get_camber_line(0)
+
+    def get_camber_line(self, xc:Optional[float | np.ndarray] = None, num_points = 20):
         """coordinates of camber line (length)
 
             num_points: int
                 number of points
         """
+        # horizontal position of camber or chord line (length)
+        if xc is None:
+            xc = np.linspace(-self.c/2, self.c/2, num_points, endpoint=True)
+
         # radius of curvature (length)
         Rc = (self.c/2) * (1/(np.sin(self.theta/2)))
         
         # camber line y-coordinate origin of radius (length)
         yc0 = -Rc * np.cos(self.theta/2)
-
-        # horizontal position of camber or chord line (length)
-        xc = np.linspace(-self.c/2, self.c/2, num_points, endpoint=True)
         
         # vertical position of camber or chord line (length)
         yc = yc0 + np.sqrt(Rc**2 - xc**2) * np.sign(self.theta)
 
         camber_line = np.array([xc,yc]).T
 
-        return get_staggered_coords(camber_line, self.xi)
+        return camber_line
 
     def get_circle(self, is_left: bool, num_points: int):
         """coordinates of circle for DCA airfoil (length)
@@ -141,7 +148,7 @@ class DCAAirfoil:
                 np.flip(upper_arc[upper_cond], axis=0), 
                 left_circle_start
             ]
-        )
+        ) - self.center
 
         return get_staggered_coords(airfoil, self.xi)
 
@@ -151,14 +158,8 @@ class DCAAirfoil:
         num_circle_points: int = 10
     ):
         fig = go.Figure()
-        xy_c = self.get_camber_line(num_arc_points)
         xy = self.get_coords(num_arc_points, num_circle_points)
         
-        fig.add_trace(go.Scatter(
-            x=xy_c[:, 0],
-            y=xy_c[:, 1],
-        ))
-
         fig.add_trace(go.Scatter(
             x=xy[:, 0],
             y=xy[:, 1],
