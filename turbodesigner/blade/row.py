@@ -196,7 +196,7 @@ class BladeRow:
 
     @cached_property
     def airfoils(self):
-        r0 = self.tb * 0.1
+        r0 = self.tb * 0.15
         # TODO: optimize this with Numba
         return [
             DCAAirfoil(self.c, self.metal_angles.theta[i], r0, self.tb, self.metal_angles.xi[i])

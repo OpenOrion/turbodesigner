@@ -1,7 +1,7 @@
 {
     "gamma": 1.4,              
-    "cx": 95.21990675436983,                 
-    "N": 24614.222307152362,                
+    "cx": 136,                 
+    "N": 10000,                
     "Rs": 287,                 
     "mdot": 4.374433141191892,                
     "PR": 2.880998489590938,                
@@ -25,13 +25,13 @@
         {"rotor": 3.0, "stator": 3.25}
     ],
     "sc": [
-        {"rotor": 1.2, "stator": 1.2},
-        {"rotor": 1.2, "stator": 1.2},
-        {"rotor": 1.2, "stator": 1.2},
-        {"rotor": 1.2, "stator": 1.2},
-        {"rotor": 1.2, "stator": 1.2},
-        {"rotor": 1.2, "stator": 1.2},
-        {"rotor": 1.2, "stator": 1.2}
+        {"rotor": 1.0, "stator": 1.0},
+        {"rotor": 1.0, "stator": 1.0},
+        {"rotor": 1.0, "stator": 1.0},
+        {"rotor": 1.0, "stator": 1.0},
+        {"rotor": 1.0, "stator": 1.0},
+        {"rotor": 1.0, "stator": 1.0},
+        {"rotor": 1.0, "stator": 1.0}
     ],
     "tbc": [
         {"rotor": 0.1, "stator": 0.1},

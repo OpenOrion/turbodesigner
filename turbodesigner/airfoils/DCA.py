@@ -3,8 +3,6 @@ from functools import cached_property
 from typing import Optional
 import plotly.graph_objects as go
 import numpy as np
-from scipy import stats
-
 from turbodesigner.airfoils.common import get_staggered_coords
 
 @dataclass
@@ -154,10 +152,11 @@ class DCAAirfoil:
 
     def visualize(
         self,
+        fig=go.Figure(),
+        show=True,
         num_arc_points: int = 20, 
         num_circle_points: int = 10
     ):
-        fig = go.Figure()
         xy = self.get_coords(num_arc_points, num_circle_points)
         
         fig.add_trace(go.Scatter(
@@ -166,5 +165,6 @@ class DCAAirfoil:
             fill="toself"
         ))
 
-        fig.layout.yaxis.scaleanchor="x"
-        fig.show()
+        fig.layout.yaxis.scaleanchor="x"  # type: ignore
+        if show:
+            fig.show()

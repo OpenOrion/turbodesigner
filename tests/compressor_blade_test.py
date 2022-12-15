@@ -9,5 +9,5 @@ class CompressorDesignTest(unittest.TestCase):
         beta2 = base_design.stages[0].stator.flow_station.beta
 
         np.testing.assert_allclose(np.degrees(alpha2), np.array([33.89769494, 25.41478326, 20.1796603 ]))
-        np.testing.assert_allclose(np.degrees(beta1), np.array([-50.78398542, -60.99475883, -67.28474591]))
+        np.testing.assert_allclose(np.degrees(beta1), np.array([-50.78297859, -60.99475883, -67.28513168]))
         np.testing.assert_allclose(np.degrees(beta2), np.array([-30.28750731, -52.45117333, -62.59349512]))
