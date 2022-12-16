@@ -26,6 +26,8 @@ class DCAAirfoil:
     "percentage of how much of x coordinates to load for arc"
 
     def __post_init__(self):
+        if self.theta == 0:
+            self.theta = 1E-5
         self.theta_mag = np.abs(self.theta)
 
     @cached_property

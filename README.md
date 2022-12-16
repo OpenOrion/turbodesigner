@@ -7,3 +7,4 @@ the open-source turbomachinery designer
 </p>
 
 ![assets/shaft.png](assets/shaft.png)
+![assets/casing.png](assets/casing.png)
