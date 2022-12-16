@@ -1,12 +1,8 @@
 matplotlib
 numpy
 scipy
-numba
 plotly==5.11.0
 ipywidgets>=7.6
-jupyterlab>=3
-cadquery
+jupyterlab
 dacite
-jupyter-cadquery==3.4.0 
-cadquery-massembly==1.0.0rc0
 CoolProp==6.4.2
