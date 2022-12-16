@@ -3,6 +3,7 @@ from functools import cached_property
 from dataclasses import dataclass
 from typing import Optional
 import numpy as np
+from CoolProp.CoolProp import PropsSI
 
 PROP_NON_STREAM_ERROR = "Property not allowed with streams"
 
@@ -40,6 +41,9 @@ class FlowStation:
     radius: float | np.ndarray = np.nan
     "flow radius (m)"
 
+    mixture: str = "Air"
+    "fluid mixture"
+
     is_stream: bool = False
     "whether station is 1D stream"
 
@@ -47,6 +51,7 @@ class FlowStation:
         self, 
         T0: Optional[float] = None,
         P0: Optional[float] = None,
+        Vm: Optional[float] = None,
         mdot: Optional[float] = None,
         alpha: Optional[float | np.ndarray] = None,
         radius: Optional[float | np.ndarray] = None,
@@ -57,12 +62,13 @@ class FlowStation:
             Rs=self.Rs,
             T0=self.T0 if T0 is None else T0,
             P0=self.P0 if P0 is None else P0,
-            Vm=self.Vm,
+            Vm=self.Vm if Vm is None else Vm,
             mdot=self.mdot if mdot is None else mdot,
             B=self.B,
             alpha=self.alpha if alpha is None else alpha,
             N=self.N,
-            radius=self.radius if radius is None else radius
+            radius=self.radius if radius is None else radius,
+            mixture=self.mixture
         )
 
     def copyStream(
@@ -85,8 +91,21 @@ class FlowStation:
             alpha=self.alpha if alpha is None else alpha,
             N=self.N,
             radius=self.radius if radius is None else radius,
-            is_stream=True
+            is_stream=True,
+            mixture=self.mixture
         )
+
+    @cached_property
+    def S(self):
+        return PropsSI('S','T',self.T0,'P',self.P0, self.mixture)
+
+    @cached_property
+    def H(self):
+        V = self.c
+        if np.isnan(V):
+            V = self.Vm
+        h0 = PropsSI('H','T',self.T0,'P',self.P0, self.mixture)
+        return h0 + (V**2)/2
 
     @cached_property
     def Cp(self):
@@ -141,7 +160,7 @@ class FlowStation:
     @cached_property
     def U(self):
         "blade velocity (m/s)"
-        return 2*np.pi*self.N*self.radius/60
+        return FlowStation.calc_U(self.N, self.radius)
 
     @cached_property
     def ctheta(self):
@@ -181,6 +200,44 @@ class FlowStation:
         assert not self.is_stream, PROP_NON_STREAM_ERROR
         return 2*self.radius - self.outer_radius
 
+
+    @staticmethod
+    def calc_radius_from_ht(ht: float, A_phys: float | np.ndarray):
+        """calculates radius from hub to tip ratio
+                
+        Parameters
+        ==========
+
+        ht: float
+            hub to tip ratio (dimensionless)
+
+        A_phys: float
+            physical cross sectional area (m**2)
+
+        """
+
+        outer_radius = np.sqrt(A_phys / (np.pi*(1-ht**2)))
+        inner_radius = ht * outer_radius
+        return (outer_radius + inner_radius) / 2
+
+
+    @staticmethod
+    def calc_U(N: float, radius: float | np.ndarray):
+        """calculates blade velocity
+                
+        Parameters
+        ==========
+
+        N: float
+            rotational speed (rpm)
+
+        radius: float
+            blade radius (m)
+
+        """
+
+        return 2*np.pi*N*radius/60
+
     def set_radius(self, ht: float):
         """sets radius from hub to tip ratio
                 
@@ -190,6 +247,4 @@ class FlowStation:
         ht: float
             hub to tip ratio (dimensionless)
         """
-        outer_radius = np.sqrt(self.A_phys / (np.pi*(1-ht**2)))
-        inner_radius = ht * outer_radius
-        self.radius = (outer_radius + inner_radius) / 2
+        self.radius = FlowStation.calc_radius_from_ht(ht, self.A_phys)

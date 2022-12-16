@@ -73,7 +73,9 @@ class Stage:
     @cached_property
     def U(self):
         "mean blade velocity (m/s)"
-        return (1/30)*np.pi*self.N*self.rm
+        U = FlowStation.calc_U(self.N, self.rm)
+        assert isinstance(U, float)
+        return U
 
     @cached_property
     def phi(self):
