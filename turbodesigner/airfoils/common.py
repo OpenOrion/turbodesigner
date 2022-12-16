@@ -7,7 +7,10 @@ class AirfoilType(Enum):
     C4 = 2
 
 def get_staggered_coords(coords: np.ndarray, stagger_angle: float):
+    x = coords[:, 0]
+    y = coords[:, 1]
+
     return np.array([
-        coords[:, 0]*np.cos(stagger_angle) - coords[:, 1]*np.sin(stagger_angle),
-        coords[:, 0]*np.sin(stagger_angle) + coords[:, 1]*np.cos(stagger_angle),
-    ]).T
+        x*np.cos(stagger_angle) - y*np.sin(stagger_angle),
+        x*np.sin(stagger_angle) + y*np.cos(stagger_angle),
+    ]).T 

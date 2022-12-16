@@ -137,7 +137,7 @@ class Turbomachinery:
         assert len(self.sc) == self.N_stg, "sc quantity does not equal N_stg"
         assert len(self.tbc) == self.N_stg, "tbc quantity does not equal N_stg"
 
-        inlet_flow_station = self.inlet_flow_station
+        previous_flow_station = self.inlet_flow_station
         stages: list[Stage] = []
         # TODO: make this more efficient with Numba
         for i in range(self.N_stg):
@@ -145,14 +145,14 @@ class Turbomachinery:
                stage_number=i+1,
                Delta_T0=self.Delta_T0_stg[i],
                R=self.R_stg[i],
-               inlet_flow_station=inlet_flow_station,
+               previous_flow_station=previous_flow_station,
                eta_poly=self.eta_poly,
                N_stream=self.N_stream,
                AR=self.AR[i],
                sc=self.sc[i],
                tbc=self.tbc[i]
             )
-            inlet_flow_station = stage.outlet_flow_station
+            previous_flow_station = stage.mid_flow_station
             if i > 0 and i < self.N_stg:
                 stages[i-1].next_stage = stage 
             stages.append(stage)

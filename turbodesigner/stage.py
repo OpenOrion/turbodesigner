@@ -39,8 +39,8 @@ class Stage:
     R: float
     "stage reaction (dimensionless)"
 
-    inlet_flow_station: FlowStation
-    "inlet flow station (FlowStation)"
+    previous_flow_station: FlowStation
+    "previous flow station (FlowStation)"
 
     eta_poly: float
     "polytropic efficiency (dimensionless)"
@@ -61,24 +61,26 @@ class Stage:
     "next turbomachinery stage"
 
     def __post_init__(self):
-        assert isinstance(self.inlet_flow_station.radius, float)
-        self.rm = self.inlet_flow_station.radius
-        self.N = self.inlet_flow_station.N
+        assert isinstance(self.previous_flow_station.radius, float)
+        self.rm = self.previous_flow_station.radius
+        self.N = self.previous_flow_station.N
 
     @cached_property
     def Delta_h(self) -> float:
         "enthalpy change between inlet and outlet (J/kg)"
-        return self.Delta_T0*self.inlet_flow_station.Cp
+        return self.Delta_T0*self.previous_flow_station.Cp
 
     @cached_property
     def U(self):
         "mean blade velocity (m/s)"
-        return (1/30)*np.pi*self.N*self.rm
+        U = FlowStation.calc_U(self.N, self.rm)
+        assert isinstance(U, float)
+        return U
 
     @cached_property
     def phi(self):
         "flow coefficient (dimensionless)"
-        return self.inlet_flow_station.Vm/self.U
+        return self.previous_flow_station.Vm/self.U
 
     @cached_property
     def psi(self):
@@ -86,28 +88,27 @@ class Stage:
         return self.Delta_h/self.U**2
 
     @cached_property
-    def alpha1(self):
-        "absolute inlet flow angle (rad)"
-        return np.arctan((1 - self.R + -(1/2)*self.psi)/self.phi)
-
-    @cached_property
-    def alpha2(self):
-        "absolute outlet flow angle (rad)"
-        return np.arctan((1 - self.R + (1/2)*self.psi)/self.phi)
-
-    @cached_property
     def T02(self):
         "outlet stagnation temperature (K)"
         return self.inlet_flow_station.T0 + self.Delta_T0
 
     @cached_property
-    def outlet_flow_station(self):
-        "outlet flow station (FlowStation)"
+    def inlet_flow_station(self):
+        "mid flow station between rotor and stator (FlowStation)"
+        alpha1 = np.arctan((1 - self.R + -(1/2)*self.psi)/self.phi)
+        return self.previous_flow_station.copyFlow(
+            alpha=alpha1,
+        )
+
+    @cached_property
+    def mid_flow_station(self):
+        "mid flow station between rotor and stator (FlowStation)"
+        alpha2 = np.arctan((1 - self.R + (1/2)*self.psi)/self.phi)
         P02 = self.inlet_flow_station.P0*self.PR
         return self.inlet_flow_station.copyFlow(
             T0=self.T02,
             P0=P02,
-            alpha=self.alpha2,
+            alpha=alpha2,
         )
 
     @cached_property
@@ -125,9 +126,8 @@ class Stage:
     def vortex(self):
         return FreeVortex(
             Um=self.U, 
-            Vm=self.inlet_flow_station.Vm, 
+            Vm=self.previous_flow_station.Vm, 
             Rm=self.R, 
-            phi_m=self.phi, 
             psi_m=self.psi, 
             rm=self.rm
         )
@@ -150,7 +150,7 @@ class Stage:
     def stator(self):
         return BladeRow(
             stage_number=self.stage_number,
-            stage_flow_station=self.outlet_flow_station,
+            stage_flow_station=self.mid_flow_station,
             vortex=self.vortex,
             AR=self.AR.stator,
             sc=self.sc.stator,

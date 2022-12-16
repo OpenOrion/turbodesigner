@@ -28,23 +28,23 @@ class CompressorDesignTest(unittest.TestCase):
     def test_stage_flow_station(self):
         next_stage = base_design.stages[1]
         np.testing.assert_almost_equal(next_stage.inlet_flow_station.T0, 308)
-        np.testing.assert_almost_equal(next_stage.outlet_flow_station.T0, 333)
-        np.testing.assert_almost_equal(next_stage.inlet_flow_station.T, 294.27188, 5)
-        np.testing.assert_almost_equal(next_stage.outlet_flow_station.T,  313.76513, 5)
+        np.testing.assert_almost_equal(next_stage.mid_flow_station.T0, 333)
+        np.testing.assert_almost_equal(next_stage.inlet_flow_station.T, 296.265, 3)
+        np.testing.assert_almost_equal(next_stage.mid_flow_station.T,  313.76513, 5)
 
         np.testing.assert_almost_equal(next_stage.inlet_flow_station.P0, 124787.12942, 5)
-        np.testing.assert_almost_equal(next_stage.outlet_flow_station.P0, 159563.80095, 5)
-        np.testing.assert_almost_equal(next_stage.inlet_flow_station.P, 106380.72812, 5)
-        np.testing.assert_almost_equal(next_stage.outlet_flow_station.P, 129567.45266, 5)
-        np.testing.assert_almost_equal(next_stage.inlet_flow_station.rho, 1.2596, 5)
-        np.testing.assert_almost_equal(next_stage.outlet_flow_station.rho,  1.43883, 5)
+        np.testing.assert_almost_equal(next_stage.mid_flow_station.P0, 159563.80095, 5)
+        np.testing.assert_almost_equal(next_stage.inlet_flow_station.P, 108924.147, 3)
+        np.testing.assert_almost_equal(next_stage.mid_flow_station.P, 129567.45266, 5)
+        np.testing.assert_almost_equal(next_stage.inlet_flow_station.rho, 1.281, 3)
+        np.testing.assert_almost_equal(next_stage.mid_flow_station.rho,  1.43883, 5)
 
-        np.testing.assert_almost_equal(next_stage.inlet_flow_station.inner_radius, 0.11993, 5)
-        np.testing.assert_almost_equal(next_stage.inlet_flow_station.outer_radius, 0.21927, 5)
+        np.testing.assert_almost_equal(next_stage.inlet_flow_station.inner_radius, 0.121, 3)
+        np.testing.assert_almost_equal(next_stage.inlet_flow_station.outer_radius, 0.218, 3)
         np.testing.assert_almost_equal(next_stage.inlet_flow_station.radius, 0.1696031)
-        np.testing.assert_almost_equal(next_stage.outlet_flow_station.inner_radius, 0.12612, 5)
-        np.testing.assert_almost_equal(next_stage.outlet_flow_station.outer_radius, 0.21308, 5)
-        np.testing.assert_almost_equal(next_stage.outlet_flow_station.radius, 0.1696031)
+        np.testing.assert_almost_equal(next_stage.mid_flow_station.inner_radius, 0.12612, 5)
+        np.testing.assert_almost_equal(next_stage.mid_flow_station.outer_radius, 0.21308, 5)
+        np.testing.assert_almost_equal(next_stage.mid_flow_station.radius, 0.1696031)
 
 if __name__ == '__main__':
     unittest.main()

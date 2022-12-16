@@ -3,7 +3,7 @@ from functools import cached_property
 from dataclasses import dataclass
 from typing import List, Optional
 from turbodesigner.airfoils import AirfoilType, DCAAirfoil
-from turbodesigner.blade.deviation import BladeDeviation
+from turbodesigner.blade.deviation.johnson import JohnsonBladeDeviation
 from turbodesigner.blade.metal_angles import MetalAngles
 from turbodesigner.blade.vortex.common import Vortex
 from turbodesigner.blade.vortex.free_vortex import FreeVortex
@@ -34,6 +34,9 @@ class BladeRowExport:
 
     number_of_blades: int
     "number of blades"
+
+    twist_angle: int
+    "twist angle of blade"
 
     is_rotating: bool
     "whether blade is rotating or not"
@@ -151,13 +154,13 @@ class BladeRow:
 
     @cached_property
     def deviation(self):
-        return BladeDeviation(self.beta1, self.beta2, self.sigma, self.tbc, self.airfoil_type)
+        return JohnsonBladeDeviation(self.beta1, self.beta2, self.sigma, self.tbc, self.airfoil_type)
 
     @cached_property
     def metal_angles(self):
         # metal_angles = self.deviation.get_metal_angles(self.deviation_iterations)
         # return metal_angles
-        return self.deviation.get_metal_angles(self.deviation_iterations)
+        return MetalAngles(self.beta1, self.beta2, 0, 0)
 
     @cached_property
     def radii(self):
@@ -193,7 +196,7 @@ class BladeRow:
 
     @cached_property
     def airfoils(self):
-        r0 = self.tb * 0.1
+        r0 = self.tb * 0.15
         # TODO: optimize this with Numba
         return [
             DCAAirfoil(self.c, self.metal_angles.theta[i], r0, self.tb, self.metal_angles.xi[i])
@@ -209,5 +212,6 @@ class BladeRow:
             radii=self.radii * MM,
             airfoils=np.array([airfoil.get_coords() for airfoil in self.airfoils]) * MM,
             number_of_blades=self.Z,
+            twist_angle=np.degrees(self.metal_angles.xi[-1]-self.metal_angles.xi[0]),
             is_rotating=self.is_rotating,
         )
