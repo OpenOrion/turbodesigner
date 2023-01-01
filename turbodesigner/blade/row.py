@@ -1,13 +1,13 @@
 from enum import Enum
 from functools import cached_property
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional
 from turbodesigner.airfoils import AirfoilType, DCAAirfoil
 from turbodesigner.blade.deviation.johnson import JohnsonBladeDeviation
 from turbodesigner.blade.metal_angles import MetalAngles
 from turbodesigner.blade.vortex.common import Vortex
-from turbodesigner.blade.vortex.free_vortex import FreeVortex
 from turbodesigner.flow_station import FlowStation
+from turbodesigner.attachments.firetree import FirtreeAttachment
 import numpy as np
 import numpy.typing as npt
 from turbodesigner.units import MM
@@ -31,6 +31,18 @@ class BladeRowExport:
 
     airfoils: np.ndarray
     "airfoil coordinates for each blade radius (length)"
+
+    attachment: np.ndarray
+    "attachment coordinates (length)"
+
+    attachment_with_tolerance: np.ndarray
+    "attachment coordinates (length)"
+
+    attachment_height: float
+    "attachment height (length)"
+
+    attachment_bottom_width: float
+    "attachment bottom width (length)"
 
     number_of_blades: int
     "number of blades"
@@ -128,7 +140,10 @@ class BladeRow:
     @cached_property
     def Z(self):
         "number of blades in row (dimensionless)"
-        return int(np.ceil(2*np.pi*self.rm/(self.sc*self.c)))
+        Z = np.ceil(2*np.pi*self.rm/(self.sc*self.c))
+        if not self.is_rotating and not Z % 2 == 0:
+            Z -= 1
+        return int(Z)
 
     @cached_property
     def s(self):
@@ -203,6 +218,26 @@ class BladeRow:
             for i in range(self.N_stream)
         ]
 
+    @cached_property
+    def attachment(self):
+        max_length = 0.75*self.s if self.is_rotating else 1*self.s
+        attachment = FirtreeAttachment(
+            gamma=np.radians(40),
+            beta=np.radians(40),
+            ll=0.15*self.s,
+            lu=0.2*self.s,
+            Ri=0.05*self.s,
+            Ro=0.025*self.s,
+            R_dove=0.05*self.s,
+            max_length=max_length,
+            num_stages=2,
+            disk_radius=self.rh,
+            tolerance=0.0006, # m, 0.5 mm
+            include_top_arc=self.is_rotating
+        )
+        return attachment
+
+
     def to_export(self):
         return BladeRowExport(
             stage_number=self.stage_number,
@@ -211,6 +246,10 @@ class BladeRow:
             tip_radius=self.rt * MM,
             radii=self.radii * MM,
             airfoils=np.array([airfoil.get_coords() for airfoil in self.airfoils]) * MM,
+            attachment=self.attachment.coords * MM,
+            attachment_with_tolerance=self.attachment.coords_with_tolerance * MM,
+            attachment_height=self.attachment.height * MM,
+            attachment_bottom_width=self.attachment.bottom_width * MM,
             number_of_blades=self.Z,
             twist_angle=np.degrees(self.metal_angles.xi[-1]-self.metal_angles.xi[0]),
             is_rotating=self.is_rotating,
