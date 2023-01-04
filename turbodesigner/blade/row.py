@@ -12,8 +12,9 @@ import numpy as np
 import numpy.typing as npt
 from turbodesigner.units import MM
 
+
 @dataclass
-class BladeRowExport:
+class BladeRowCadExport:
     stage_number: int
     "stage number"
 
@@ -89,6 +90,7 @@ class BladeRow:
     "nominal deviation iterations"
 
     def __post_init__(self):
+        assert self.N_stream % 2 != 0, "N_stream must be an odd number" 
         if self.is_rotating and self.next_flow_station is None:
             self.next_flow_station = self.stage_flow_station.copyStream(
                 alpha=self.vortex.alpha(self.radii, is_rotating=False),
@@ -125,7 +127,7 @@ class BladeRow:
     def h_disk(self):
         "disk height of blade row (m)"
         xi = self.metal_angles.xi[0] if self.is_rotating else self.metal_angles.xi[-1]
-        return np.abs(self.c*np.cos(xi)* 1.25)
+        return np.abs(self.c*np.cos(xi) * 1.25)
 
     @cached_property
     def c(self):
@@ -152,7 +154,7 @@ class BladeRow:
 
     @cached_property
     def sigma(self):
-        "spacing between blades (m)"
+        "spacing between blades (dimensionless)"
         return 1 / self.sc
 
     @cached_property
@@ -162,10 +164,9 @@ class BladeRow:
         # elif self.stage_flow_station.MN >= 0.7 and self.stage_flow_station.MN <= 1.20:
         #     return AirfoilType.DCA
         # raise ValueError("MN > 1.20 not currently supported")
-        
+
         # TODO: only have support of DCA airfoil generation at the moment
         return AirfoilType.DCA
-
 
     @cached_property
     def deviation(self):
@@ -196,14 +197,14 @@ class BladeRow:
         if self.is_rotating:
             return self.flow_station.beta   # beta1
         return self.flow_station.alpha      # alpha2
-    
+
     @cached_property
     def beta2(self):
         "blade outlet flow angle (rad)"
         if self.is_rotating:
             assert self.next_flow_station is not None
             return self.next_flow_station.beta                      # beta2
-        
+
         assert self.next_flow_station is not None or self.vortex.Rm == 0.5, "next_flow_station needs to be defined or Rc=0.5"
         if self.next_flow_station is not None:
             return self.next_flow_station.alpha                     # alpha3
@@ -232,14 +233,13 @@ class BladeRow:
             max_length=max_length,
             num_stages=2,
             disk_radius=self.rh,
-            tolerance=0.0006, # m, 0.5 mm
+            tolerance=0.0006,  # m, 0.5 mm
             include_top_arc=self.is_rotating
         )
         return attachment
 
-
-    def to_export(self):
-        return BladeRowExport(
+    def to_cad_export(self):
+        return BladeRowCadExport(
             stage_number=self.stage_number,
             disk_height=self.h_disk * MM,
             hub_radius=self.rh * MM,

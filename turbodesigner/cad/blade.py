@@ -2,8 +2,9 @@ from dataclasses import dataclass
 from functools import cached_property
 import cadquery as cq
 import numpy as np
-from turbodesigner.blade.row import BladeRowExport
+from turbodesigner.blade.row import BladeRowCadExport
 from turbodesigner.cad.common import ExtendedWorkplane, FastenerPredicter
+
 
 @dataclass
 class BladeCadModelSpecification:
@@ -16,9 +17,10 @@ class BladeCadModelSpecification:
     fastener_diameter_to_attachment_bottom_width: float = 0.25
     "blade attachment fastener to disk height (dimensionless)"
 
+
 @dataclass
 class BladeCadModel:
-    blade_row: BladeRowExport
+    blade_row: BladeRowCadExport
     "blade row"
 
     spec: BladeCadModelSpecification = BladeCadModelSpecification()
@@ -48,7 +50,7 @@ class BladeCadModel:
             (np.max(start_airfoil[:, 0]) + np.min(start_airfoil[:, 0]))/2,
             (np.max(start_airfoil[:, 1]) + np.min(start_airfoil[:, 1]))/2
         ])
-        
+
         # Hub Airfoil
         blade_profile = (
             cq.Workplane("XY")
@@ -80,7 +82,7 @@ class BladeCadModel:
         if not self.blade_row.is_rotating:
             attachment_workplane = (
                 attachment_workplane
-                .transformed(rotate=(0,0,180), offset=(0,blade_height,0))
+                .transformed(rotate=(0, 0, 180), offset=(0, blade_height, 0))
             )
         # Attachment Profile
         attachment_profile = (
@@ -104,7 +106,6 @@ class BladeCadModel:
                 blade_profile
                 .add(attachment_profile)
             )
-
 
         base_assembly.add(blade_profile, name="Blade")
         base_assembly.add(fastener_assembly, name="Fasteners")

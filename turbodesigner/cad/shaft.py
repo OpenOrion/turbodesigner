@@ -4,8 +4,8 @@ from typing import Optional
 import cadquery as cq
 from turbodesigner.cad.common import ExtendedWorkplane, FastenerPredicter
 from turbodesigner.cad.blade import BladeCadModel, BladeCadModelSpecification
-from turbodesigner.stage import StageExport
-from turbodesigner.turbomachinery import TurbomachineryExport
+from turbodesigner.stage import StageCadExport
+from turbodesigner.turbomachinery import TurbomachineryCadExport
 
 
 @dataclass
@@ -34,12 +34,13 @@ class ShaftCadModelSpecification:
     stage_connect_clearance: float = 0.5
     "shaft stage connect circular clearance (mm)"
 
+
 @dataclass
 class ShaftCadModel:
-    stage: StageExport
+    stage: StageCadExport
     "turbomachinery stage"
 
-    next_stage: Optional[StageExport] = None
+    next_stage: Optional[StageCadExport] = None
     "next turbomachinery stage"
 
     spec: ShaftCadModelSpecification = ShaftCadModelSpecification()
@@ -174,7 +175,7 @@ class ShaftCadModel:
                     .workplane()
                     .circle(self.next_stage_shaft_cad_model.stage_connect_outer_radius + self.spec.stage_connect_clearance)
                     .cutBlind(-self.next_stage_shaft_cad_model.stage_connect_height)
-                    
+
                     # Next Shaft Connect Screws
                     .faces("<Z")
                     .workplane(offset=-self.next_stage_shaft_cad_model.stage_connect_height/2)
@@ -182,9 +183,7 @@ class ShaftCadModel:
                     .mutatePoints(lambda loc: loc * cq.Location(cq.Vector(0, 0, 0), cq.Vector(0, 1, 0), 90))
                     .clearanceHole(self.next_stage_stage_connect_screw, fit="Loose", baseAssembly=fastener_assembly)
                 )
-            
 
-        
         blade_vertical_offset = self.stage.stator.disk_height+self.transition_height+self.stage.rotor.disk_height/2
         blade_assembly_locs = (
             ExtendedWorkplane("XY")
@@ -196,14 +195,14 @@ class ShaftCadModel:
         for (i, blade_assembly_loc) in enumerate(blade_assembly_locs):
             assert isinstance(blade_assembly_loc, cq.Location)
             blade_assembly.add(self.blade_cad_model.blade_assembly, loc=blade_assembly_loc, name=f"Blade {i+1}")
-        
+
         base_assembly.add(shaft_profile, name=f"Stage Shaft")
         base_assembly.add(blade_assembly, name="Blades")
         base_assembly.add(fastener_assembly, name="Fasteners")
         return base_assembly
 
     @staticmethod
-    def shaft_assembly(turbomachinery: TurbomachineryExport, spec: ShaftCadModelSpecification=ShaftCadModelSpecification()):
+    def shaft_assembly(turbomachinery: TurbomachineryCadExport, spec: ShaftCadModelSpecification = ShaftCadModelSpecification()):
         assembly = cq.Assembly()
         stage_height_offset = 0
 

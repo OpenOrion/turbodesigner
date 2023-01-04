@@ -3,12 +3,12 @@ from dataclasses import dataclass
 import json
 import numpy as np
 from turbodesigner.flow_station import FlowStation
-from turbodesigner.stage import Stage, StageBladeProperty, StageExport
+from turbodesigner.stage import Stage, StageBladeProperty, StageCadExport
 from dacite.core import from_dict
 
 @dataclass
-class TurbomachineryExport:
-    stages: list[StageExport]
+class TurbomachineryCadExport:
+    stages: list[StageCadExport]
     "turbomachinery stages"
 
 @dataclass
@@ -32,22 +32,16 @@ class Turbomachinery:
     "pressure ratio (dimensionless)"
 
     P01: float
-    "inlet stagnation pressure (Pa)"
+    "ambient pressure (Pa)"
 
     T01: float
-    "inlet stagnation temperature (K)"
+    "ambient temperature (K)"
 
     eta_isen: float
     "isentropic efficiency (dimensionless)"
 
     N_stg: int
     "number of stages (dimensionless)"
-
-    Delta_T0_stg: list[float]
-    "array of stage stagnation temperature change between inlet and outlet (K)"
-
-    R_stg: list[float]
-    "array of stage reaction rates (dimensionless)"
 
     B_in: float
     "inlet blockage factor (dimensionless)"
@@ -56,19 +50,25 @@ class Turbomachinery:
     "outlet blockage factor (dimensionless)"
 
     ht: float
-    "hub to tip ratio(dimensionless)"
+    "hub to tip ratio (dimensionless)"
 
     N_stream: int
     "number of streams per blade (dimensionless)"
 
+    Delta_T0_stg: list[float]
+    "array of stage stagnation temperature rises between inlet and outlet (K)"
+
+    R_stg: list[float]
+    "array of stage reaction rates (dimensionless)"
+
     AR: list[StageBladeProperty]
-    "aspect ratio (dimensionless)"
+    "aspect ratios (dimensionless)"
 
     sc: list[StageBladeProperty]
-    "spacing to chord ratio (dimensionless)"
+    "spacing to chord ratios (dimensionless)"
 
     tbc: list[StageBladeProperty]
-    "max thickness to chord (dimensionless)"
+    "max thickness to chords (dimensionless)"
 
     @cached_property
     def T02(self):
@@ -121,7 +121,6 @@ class Turbomachinery:
         "stagnation temperature change between outlet and inlet (dimensionless)"
         return self.outlet_flow_station.T0 - self.inlet_flow_station.T0
 
-
     @cached_property
     def TR(self):
         "stagnation temperature ratio between outlet and inlet (dimensionless)"
@@ -142,35 +141,33 @@ class Turbomachinery:
         # TODO: make this more efficient with Numba
         for i in range(self.N_stg):
             stage = Stage(
-               stage_number=i+1,
-               Delta_T0=self.Delta_T0_stg[i],
-               R=self.R_stg[i],
-               previous_flow_station=previous_flow_station,
-               eta_poly=self.eta_poly,
-               N_stream=self.N_stream,
-               AR=self.AR[i],
-               sc=self.sc[i],
-               tbc=self.tbc[i]
+                stage_number=i+1,
+                Delta_T0=self.Delta_T0_stg[i],
+                R=self.R_stg[i],
+                previous_flow_station=previous_flow_station,
+                eta_poly=self.eta_poly,
+                N_stream=self.N_stream,
+                AR=self.AR[i],
+                sc=self.sc[i],
+                tbc=self.tbc[i]
             )
             previous_flow_station = stage.mid_flow_station
             if i > 0 and i < self.N_stg:
-                stages[i-1].next_stage = stage 
+                stages[i-1].next_stage = stage
             stages.append(stage)
-        
+
         return stages
 
-    def to_export(self):
-        return TurbomachineryExport(
-            stages = [
-                stage.to_export() for stage in self.stages
+    def to_cad_export(self):
+        return TurbomachineryCadExport(
+            stages=[
+                stage.to_cad_export() for stage in self.stages
             ]
         )
-    
+
     @staticmethod
     def from_dict(obj) -> "Turbomachinery":
         return from_dict(data_class=Turbomachinery, data=obj)
-
-
     @staticmethod
     def from_file(file_name: str) -> "Turbomachinery":
         with open(file_name, "r") as fp:
