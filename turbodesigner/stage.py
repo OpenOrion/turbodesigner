@@ -2,10 +2,9 @@ from functools import cached_property
 from dataclasses import dataclass
 from typing import Optional
 import numpy as np
-from turbodesigner.blade.row import BladeRow, BladeRowExport
+from turbodesigner.blade.row import BladeRow, BladeRowCadExport
 from turbodesigner.blade.vortex.free_vortex import FreeVortex
 from turbodesigner.flow_station import FlowStation
-
 
 @dataclass
 class StageBladeProperty:
@@ -13,11 +12,11 @@ class StageBladeProperty:
     stator: float
 
 @dataclass
-class StageExport:
-    rotor: BladeRowExport
+class StageCadExport:
+    rotor: BladeRowCadExport
     "rotor blade row"
 
-    stator: BladeRowExport
+    stator: BladeRowCadExport
     "stator blade row"
 
     stage_height: float
@@ -125,10 +124,10 @@ class Stage:
     @cached_property
     def vortex(self):
         return FreeVortex(
-            Um=self.U, 
-            Vm=self.previous_flow_station.Vm, 
-            Rm=self.R, 
-            psi_m=self.psi, 
+            Um=self.U,
+            Vm=self.previous_flow_station.Vm,
+            Rm=self.R,
+            psi_m=self.psi,
             rm=self.rm
         )
 
@@ -160,11 +159,11 @@ class Stage:
             next_flow_station=None if self.next_stage is None else self.next_stage.rotor.flow_station
         )
 
-    def to_export(self):
-        rotor=self.rotor.to_export()
-        stator=self.stator.to_export()
+    def to_cad_export(self):
+        rotor = self.rotor.to_cad_export()
+        stator = self.stator.to_cad_export()
         stage_height = rotor.disk_height+stator.disk_height
-        return StageExport(
+        return StageCadExport(
             stage_number=self.stage_number,
             rotor=rotor,
             stator=stator,

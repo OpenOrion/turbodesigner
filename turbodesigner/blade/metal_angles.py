@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 import numpy as np
+from turbodesigner.units import DEG
 
 @dataclass
 class MetalAngles:
