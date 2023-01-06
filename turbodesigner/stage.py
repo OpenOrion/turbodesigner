@@ -5,6 +5,7 @@ import numpy as np
 from turbodesigner.blade.row import BladeRow, BladeRowCadExport
 from turbodesigner.blade.vortex.free_vortex import FreeVortex
 from turbodesigner.flow_station import FlowStation
+from turbodesigner.units import MM
 
 @dataclass
 class StageBladeProperty:
@@ -20,10 +21,17 @@ class StageCadExport:
     "stator blade row"
 
     stage_height: float
-    "stage height"
+    "stage height (mm)"
 
     stage_number: int
     "stage number"
+
+    row_gap: float
+    "stage gap (mm)"
+
+    stage_gap: float
+    "stage gap (mm)"
+
 
 @dataclass
 class Stage:
@@ -56,6 +64,12 @@ class Stage:
     tbc: StageBladeProperty
     "max thickness to chord (dimensionless)"
 
+    rgc: float
+    "row gap to chord (dimensionless)"
+
+    sgc: float
+    "stage gap to chord (dimensionless)"
+    
     next_stage: Optional["Stage"] = None
     "next turbomachinery stage"
 
@@ -65,7 +79,7 @@ class Stage:
         self.N = self.previous_flow_station.N
 
     @cached_property
-    def Delta_h(self) -> float:
+    def Delta_h0(self) -> float:
         "enthalpy change between inlet and outlet (J/kg)"
         return self.Delta_T0*self.previous_flow_station.Cp
 
@@ -84,7 +98,7 @@ class Stage:
     @cached_property
     def psi(self):
         "loading coefficient (dimensionless)"
-        return self.Delta_h/self.U**2
+        return self.Delta_h0/self.U**2
 
     @cached_property
     def T02(self):
@@ -167,5 +181,7 @@ class Stage:
             stage_number=self.stage_number,
             rotor=rotor,
             stator=stator,
-            stage_height=stage_height
+            stage_height=stage_height,
+            stage_gap=self.sgc*self.rotor.c*MM,
+            row_gap=self.rgc*self.rotor.c*MM
         )

@@ -13,9 +13,6 @@ class ShaftCadModelSpecification:
     is_simple: bool = False
     "whether to include attachment or fuse into shaft (bool)"
 
-    shaft_transition_to_total_height: float = 0.25
-    "casing transition height to total stage height (dimensionless)"
-
     stage_connect_length_to_heatset_thickness: float = 2.00
     "shaft stage connect to hub radius (dimensionless)"
 
@@ -47,8 +44,6 @@ class ShaftCadModel:
     "shaft cad model specification"
 
     def __post_init__(self):
-        self.transition_height = self.stage.stage_height * self.spec.shaft_transition_to_total_height
-
         self.stage_connect_heatset = FastenerPredicter.predict_heatset(
             target_diameter=self.stage.rotor.disk_height*self.spec.stage_connect_heatset_diameter_to_disk_height,
         )
@@ -103,18 +98,18 @@ class ShaftCadModel:
         fastener_assembly = cq.Assembly()
 
         shaft_profile = (
-            # Stator Disk
             ExtendedWorkplane("XY")
+            # Stator Disk
             .circle(self.stage.stator.hub_radius)
-            .extrude(self.stage.stator.disk_height)
+            .extrude(self.stage.stator.disk_height+self.stage.stage_gap)
 
-            # Transition Disk
+            # Row Gap Transition Disk
             .faces(">Z")
             .workplane()
             .truncated_cone(
                 start_radius=self.stage.stator.hub_radius,
                 end_radius=self.stage.rotor.hub_radius,
-                height=self.transition_height
+                height=self.stage.row_gap
             )
 
             # Rotor Disk
@@ -184,7 +179,7 @@ class ShaftCadModel:
                     .clearanceHole(self.next_stage_stage_connect_screw, fit="Loose", baseAssembly=fastener_assembly)
                 )
 
-        blade_vertical_offset = self.stage.stator.disk_height+self.transition_height+self.stage.rotor.disk_height/2
+        blade_vertical_offset = self.stage.stage_gap+self.stage.stator.disk_height+self.stage.row_gap+self.stage.rotor.disk_height/2
         blade_assembly_locs = (
             ExtendedWorkplane("XY")
             .polarArray(self.stage.rotor.hub_radius, 0, 360, self.stage.rotor.number_of_blades)
@@ -210,7 +205,7 @@ class ShaftCadModel:
             current_stage = turbomachinery.stages[i]
             next_stage = turbomachinery.stages[i+1] if i+1 < len(turbomachinery.stages) else current_stage
 
-            stage_height_offset -= current_stage.stage_height * (1+spec.shaft_transition_to_total_height)
+            stage_height_offset -= current_stage.stage_height + current_stage.stage_gap + current_stage.row_gap
             shaft_cad_model = ShaftCadModel(current_stage, next_stage, spec)
             assembly.add(shaft_cad_model.shaft_stage_assembly, loc=cq.Location(cq.Vector(0, 0, stage_height_offset)), name=f"Stage {current_stage.stage_number}")
 

@@ -17,9 +17,6 @@ class CasingCadModelSpecifciation:
     casing_thickness_to_inlet_radius: float = 0.25
     "casing thickness to tip radius of first stage (dimensionless)"
 
-    casing_transition_to_total_height: float = 0.25
-    "casing transition height to total stage height (dimensionless)"
-
     stage_connect_height_to_screw_head_diameter: float = 1.75
     "casing stage connect to disk height (dimensionless)"
 
@@ -51,7 +48,6 @@ class CasingCadModel:
     "casing cad model specification"
 
     def __post_init__(self):
-        self.transition_height = self.stage.stage_height * self.spec.casing_transition_to_total_height
         self.stage_connect_heatset = FastenerPredicter.predict_heatset(
             target_diameter=self.stage.rotor.disk_height*self.spec.stage_connect_heatset_diameter_to_disk_height,
         )
@@ -85,7 +81,7 @@ class CasingCadModel:
         self.sector_angle = 360 / self.stage.stator.number_of_blades
         self.half_connect_thickness = self.casing_radius*np.sin(np.radians(self.sector_angle) / 2)
         self.half_connect_width = self.casing_thickness*self.spec.half_connect_width_to_casing_thickness
-        self.half_connect_height = self.stage.stage_height + self.transition_height
+        self.half_connect_height = self.stage.stage_height + self.stage.row_gap
         self.half_connect_heatset = FastenerPredicter.predict_heatset(
             target_diameter=self.half_connect_width*0.5,
         )
@@ -105,7 +101,7 @@ class CasingCadModel:
             ExtendedWorkplane("XY")
             .transformed(offset=(0, 0, -self.stage_connect_height))
             .circle(self.stage.stator.tip_radius*1.001)
-            .extrude(self.stage.stator.disk_height+self.stage_connect_height)
+            .extrude(self.stage.stator.disk_height+self.stage.stage_gap+self.stage_connect_height)
 
             # Transition Disk
             .faces(">Z")
@@ -113,7 +109,7 @@ class CasingCadModel:
             .truncated_cone(
                 start_radius=self.stage.stator.tip_radius,
                 end_radius=self.stage.rotor.tip_radius,
-                height=self.transition_height
+                height=self.stage.row_gap
             )
 
             # Rotor Disk
@@ -213,7 +209,6 @@ class CasingCadModel:
                 )
 
         if not self.spec.is_simple:
-            half_casing_bottom_offset = -(self.stage.stage_height+self.transition_height+self.stage_connect_height)/2
             left_casing_profile = (
                 casing_profile
                 .transformed(rotate=(90, -45, 0))
@@ -273,7 +268,7 @@ class CasingCadModel:
         for i in range(0, len(turbomachinery.stages)):
             current_stage = turbomachinery.stages[i]
 
-            stage_height_offset -= current_stage.stage_height * (1+spec.casing_transition_to_total_height)
+            stage_height_offset -= current_stage.stage_height + current_stage.stage_gap + current_stage.row_gap
             casing_cad_model = CasingCadModel(current_stage, first_stage, previous_stage, spec)
             assembly.add(casing_cad_model.casing_stage_assembly, loc=cq.Location(cq.Vector(0, 0, stage_height_offset)), name=f"Stage {current_stage.stage_number}")
             previous_stage = current_stage

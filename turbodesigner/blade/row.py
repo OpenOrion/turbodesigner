@@ -19,31 +19,31 @@ class BladeRowCadExport:
     "stage number"
 
     disk_height: float
-    "disk height (length)"
+    "disk height (mm)"
 
     hub_radius: float
-    "blade hub radius (length)"
+    "blade hub radius (mm)"
 
     tip_radius: float
-    "blade hub radius (length)"
+    "blade hub radius (mm)"
 
     radii: npt.NDArray[np.float64]
-    "blade station radius (length)"
+    "blade station radius (mm)"
 
     airfoils: np.ndarray
-    "airfoil coordinates for each blade radius (length)"
+    "airfoil coordinates for each blade radius (mm)"
 
     attachment: np.ndarray
-    "attachment coordinates (length)"
+    "attachment coordinates (mm)"
 
     attachment_with_tolerance: np.ndarray
-    "attachment coordinates (length)"
+    "attachment coordinates (mm)"
 
     attachment_height: float
-    "attachment height (length)"
+    "attachment height (mm)"
 
     attachment_bottom_width: float
-    "attachment bottom width (length)"
+    "attachment bottom width (mm)"
 
     number_of_blades: int
     "number of blades"

@@ -1,6 +1,7 @@
 from functools import cached_property
 from dataclasses import dataclass
 import json
+from typing import Literal, Union
 import numpy as np
 from turbodesigner.flow_station import FlowStation
 from turbodesigner.stage import Stage, StageBladeProperty, StageCadExport
@@ -11,6 +12,7 @@ class TurbomachineryCadExport:
     stages: list[StageCadExport]
     "turbomachinery stages"
 
+Number = Union[int, float]
 @dataclass
 class Turbomachinery:
     gamma: float
@@ -43,10 +45,10 @@ class Turbomachinery:
     N_stg: int
     "number of stages (dimensionless)"
 
-    B_in: float
+    B_in: Union[Number, list[Number]]
     "inlet blockage factor (dimensionless)"
 
-    B_out: float
+    B_out: Union[Number, list[Number]]
     "outlet blockage factor (dimensionless)"
 
     ht: float
@@ -55,19 +57,25 @@ class Turbomachinery:
     N_stream: int
     "number of streams per blade (dimensionless)"
 
-    Delta_T0_stg: list[float]
+    Delta_T0_stg: Union[list[float], Literal["equal"]]
     "array of stage stagnation temperature rises between inlet and outlet (K)"
 
-    R_stg: list[float]
+    R_stg: Union[Number, list[Number]]
     "array of stage reaction rates (dimensionless)"
 
-    AR: list[StageBladeProperty]
+    rgc: Union[Number, list[Number]]
+    "row gap to chord (dimensionless)"
+
+    sgc: Union[Number, list[Number]]
+    "stage gap to chord (dimensionless)"
+
+    AR: Union[StageBladeProperty, list[StageBladeProperty]]
     "aspect ratios (dimensionless)"
 
-    sc: list[StageBladeProperty]
+    sc: Union[StageBladeProperty, list[StageBladeProperty]]
     "spacing to chord ratios (dimensionless)"
 
-    tbc: list[StageBladeProperty]
+    tbc: Union[StageBladeProperty, list[StageBladeProperty]]
     "max thickness to chords (dimensionless)"
 
     @cached_property
@@ -95,7 +103,7 @@ class Turbomachinery:
             P0=self.P01,
             Vm=self.cx,
             mdot=self.mdot,
-            B=self.B_in,
+            B=self.B_in[0] if isinstance(self.B_in, list) else self.B_in,
             N=self.N,
         )
         flow_station.set_radius(self.ht)
@@ -111,7 +119,7 @@ class Turbomachinery:
             P0=self.P02,
             Vm=self.cx,
             mdot=self.mdot,
-            B=self.B_out,
+            B=self.B_out[-1] if isinstance(self.B_out, list) else self.B_out,
             N=self.N,
             radius=self.inlet_flow_station.radius
         )
@@ -129,12 +137,23 @@ class Turbomachinery:
     @cached_property
     def stages(self):
         "turbomachinery stages (list[Stage])"
-        assert len(self.Delta_T0_stg) == self.N_stg, "Delta_T0 quantity does not equal N_stg"
-        assert len(self.R_stg) == self.N_stg, "R quantity does not equal N_stg"
-        assert self.R_stg[self.N_stg-1] == 0.5, "Last stage reaction only supports R=0.5"
-        assert len(self.AR) == self.N_stg, "AR quantity does not equal N_stg"
-        assert len(self.sc) == self.N_stg, "sc quantity does not equal N_stg"
-        assert len(self.tbc) == self.N_stg, "tbc quantity does not equal N_stg"
+        if isinstance(self.Delta_T0_stg, list):
+            assert len(self.Delta_T0_stg) == self.N_stg, "Delta_T0 quantity does not equal N_stg"
+        else:
+            assert self.Delta_T0_stg == "equal", f"'{self.Delta_T0_stg}' for  Delta_T0_stg is invalid"
+        
+        if isinstance(self.R_stg, list):
+            assert len(self.R_stg) == self.N_stg, "R quantity does not equal N_stg"
+            assert self.R_stg[self.N_stg-1] == 0.5, "Last stage reaction only supports R=0.5"
+        else:
+            assert self.R_stg == 0.5, "Last stage reaction only supports R=0.5"
+
+        if isinstance(self.AR, list):
+            assert len(self.AR) == self.N_stg, "AR quantity does not equal N_stg"
+        if isinstance(self.sc, list):
+            assert len(self.sc) == self.N_stg, "sc quantity does not equal N_stg"
+        if isinstance(self.tbc, list):
+            assert len(self.tbc) == self.N_stg, "tbc quantity does not equal N_stg"
 
         previous_flow_station = self.inlet_flow_station
         stages: list[Stage] = []
@@ -142,14 +161,16 @@ class Turbomachinery:
         for i in range(self.N_stg):
             stage = Stage(
                 stage_number=i+1,
-                Delta_T0=self.Delta_T0_stg[i],
-                R=self.R_stg[i],
+                Delta_T0=self.Delta_T0_stg[i] if isinstance(self.Delta_T0_stg, list) else self.Delta_T0/self.N_stg,
+                R=self.R_stg[i] if isinstance(self.R_stg, list) else self.R_stg,
                 previous_flow_station=previous_flow_station,
                 eta_poly=self.eta_poly,
                 N_stream=self.N_stream,
-                AR=self.AR[i],
-                sc=self.sc[i],
-                tbc=self.tbc[i]
+                AR=self.AR[i] if isinstance(self.AR, list) else self.AR,
+                sc=self.sc[i] if isinstance(self.sc, list) else self.sc,
+                tbc=self.tbc[i] if isinstance(self.tbc, list) else self.tbc,
+                rgc=self.rgc[i] if isinstance(self.rgc, list) else self.rgc,
+                sgc=self.sgc[i] if isinstance(self.sgc, list) else self.sgc
             )
             previous_flow_station = stage.mid_flow_station
             if i > 0 and i < self.N_stg:

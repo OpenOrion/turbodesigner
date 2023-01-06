@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from functools import cached_property
+from typing import Union
 import numpy as np
 
 @dataclass
@@ -22,10 +23,10 @@ class Vortex:
     def __post_init__(self):
         self.phi_m = self.Vm/self.Um
 
-    def ctheta(self, r: np.ndarray | float, is_rotating: bool):
+    def ctheta(self, r: Union[float, np.ndarray], is_rotating: bool):
         "absolute tangential velocity (m/s)"
         return np.nan
 
-    def alpha(self, r: np.ndarray | float, is_rotating: bool):
+    def alpha(self, r: Union[float, np.ndarray], is_rotating: bool):
         "absolute flow angle (rad)"
         return np.arctan(self.ctheta(r, is_rotating)/self.Vm)

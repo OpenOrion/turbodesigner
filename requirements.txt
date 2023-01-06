@@ -1,10 +1,11 @@
-matplotlib
-numpy
-scipy
+kaleido
 plotly==5.11.0
 ipywidgets>=7.6
 jupyterlab
+matplotlib
+
+numpy
+scipy
 dacite
-CoolProp==6.4.2
 git+https://github.com/gumyr/cq_warehouse.git#egg=cq_warehouse
 pandas

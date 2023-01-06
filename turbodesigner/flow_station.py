@@ -1,15 +1,14 @@
 from cmath import isnan
 from functools import cached_property
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Union
 import numpy as np
-from CoolProp.CoolProp import PropsSI
 
 PROP_NON_STREAM_ERROR = "Property not allowed with streams"
 
 @dataclass
 class FlowStation:
-    "calculates flow station"
+    "calculates flow station for an ideal gas"
 
     gamma: float = np.nan
     "ratio of specific heats (dimensionless)"
@@ -32,13 +31,13 @@ class FlowStation:
     B: float = 0.0
     "blockage factor (dimensionless)"
 
-    alpha: float | np.ndarray = np.nan
+    alpha: Union[float,np.ndarray] = np.nan
     "absolute flow angle (rad)"
 
     N: float = np.nan
     "rotational speed (rpm)"
 
-    radius: float | np.ndarray = np.nan
+    radius: Union[float,np.ndarray] = np.nan
     "flow radius (m)"
 
     mixture: str = "Air"
@@ -53,8 +52,8 @@ class FlowStation:
         P0: Optional[float] = None,
         Vm: Optional[float] = None,
         mdot: Optional[float] = None,
-        alpha: Optional[float | np.ndarray] = None,
-        radius: Optional[float | np.ndarray] = None,
+        alpha: Optional[Union[float,np.ndarray]] = None,
+        radius: Optional[Union[float,np.ndarray]] = None,
     ):
         "copies all elements of FlowStation (FlowStation)"
         return FlowStation(
@@ -73,8 +72,8 @@ class FlowStation:
 
     def copyStream(
         self, 
-        alpha: Optional[float | np.ndarray] = None,
-        radius: Optional[float | np.ndarray] = None,
+        alpha: Optional[Union[float,np.ndarray]] = None,
+        radius: Optional[Union[float,np.ndarray]] = None,
     ):
         """copies stream elements of FlowStation (FlowStation)
            
@@ -96,16 +95,17 @@ class FlowStation:
         )
 
     @cached_property
-    def S(self):
-        return PropsSI('S','T',self.T0,'P',self.P0, self.mixture)
+    def H0(self):
+        "stagnation enthalpy (J/kg*K)"
+        return self.T0*self.Cp
 
     @cached_property
     def H(self):
+        "static enthalpy (J/kg*K)"
         V = self.c
         if np.isnan(V):
             V = self.Vm
-        h0 = PropsSI('H','T',self.T0,'P',self.P0, self.mixture)
-        return h0 + (V**2)/2
+        return self.H0 - (V**2)/2
 
     @cached_property
     def Cp(self):
@@ -115,10 +115,7 @@ class FlowStation:
     @cached_property
     def T(self):
         "static fluid temperature (K)"
-        V = self.c
-        if np.isnan(V):
-            V = self.Vm
-        return self.T0 - (V**2)/(2*self.Cp)
+        return self.H/self.Cp
 
     @cached_property
     def P(self):
@@ -202,7 +199,7 @@ class FlowStation:
 
 
     @staticmethod
-    def calc_radius_from_ht(ht: float, A_phys: float | np.ndarray):
+    def calc_radius_from_ht(ht: float, A_phys: Union[float,np.ndarray]):
         """calculates radius from hub to tip ratio
                 
         Parameters
@@ -222,7 +219,7 @@ class FlowStation:
 
 
     @staticmethod
-    def calc_U(N: float, radius: float | np.ndarray):
+    def calc_U(N: float, radius: Union[float,np.ndarray]):
         """calculates blade velocity
                 
         Parameters

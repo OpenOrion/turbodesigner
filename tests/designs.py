@@ -1,5 +1,4 @@
 import os
-from turbodesigner.stage import StageBladeProperty
 from turbodesigner.turbomachinery import Turbomachinery
 
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
