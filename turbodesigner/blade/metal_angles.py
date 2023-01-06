@@ -1,20 +1,21 @@
 from dataclasses import dataclass, field
+from typing import Union
 import numpy as np
 from turbodesigner.units import DEG
 
 @dataclass
 class MetalAngles:
 
-    beta1: float | np.ndarray
+    beta1: Union[float, np.ndarray]
     "blade inlet flow angle (rad)"
 
-    beta2: float | np.ndarray
+    beta2: Union[float, np.ndarray]
     "blade outlet flow angle (rad)"
 
-    i: float | np.ndarray
+    i: Union[float, np.ndarray]
     "blade incidence (rad)"
 
-    delta: float | np.ndarray
+    delta: Union[float, np.ndarray]
     "blade deviation (rad)"
 
     kappa1: np.ndarray = field(init=False) 

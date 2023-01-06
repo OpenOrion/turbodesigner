@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from functools import cached_property
+from typing import Union
 import numpy as np
 from turbodesigner.airfoils import AirfoilType
 from turbodesigner.blade.metal_angles import MetalAngles
@@ -7,10 +8,10 @@ from turbodesigner.blade.metal_angles import MetalAngles
 @dataclass
 class JohnsonBladeDeviation:
 
-    beta1: float | np.ndarray
+    beta1: Union[float, np.ndarray]
     "inlet flow angle (rad)"
 
-    beta2: float | np.ndarray
+    beta2: Union[float, np.ndarray]
     "outlet flow angle (rad)"
 
     sigma: float
@@ -76,11 +77,11 @@ class JohnsonBladeDeviation:
         p = (1/160)*self.sigma**3 + 0.914 
         return ((self.beta1_deg**p)/(5 + 46*np.exp(-2.3*self.sigma))) - 0.1*self.sigma**3*np.exp((self.beta1_deg - 70)/4)
 
-    def get_i_star_deg(self, theta_deg: float | np.ndarray):
+    def get_i_star_deg(self, theta_deg: Union[float, np.ndarray]):
         "nominal incidence angle (deg)"
         return theta_deg*self.n + self.kti*self.i_star_0_10*self.Ksh
 
-    def get_delta_star_deg(self, theta_deg: float | np.ndarray):
+    def get_delta_star_deg(self, theta_deg: Union[float, np.ndarray]):
         "nominal deviation angle (deg)"
         return self.Ksh*self.Ktdelta*self.delta_star_0_10 + theta_deg*self.m
 

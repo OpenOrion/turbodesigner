@@ -24,6 +24,20 @@ Turbodesigner is a tool that given [parameters](https://github.com/Turbodesigner
 
 Currently this generates axial compressors and with further tweaks axial turbopumps for liquid rocket engines
 
+# Assumptions
+To avoid feature creep or due to lack of development the following assumption are made:
+* `Turbomachinery` is an axial compressor (will suport more in later versions)
+* `FlowStation` assumes an Ideal Gas
+* Mean line is constant and is based on hub to tip ratio
+* Blade calculations are base on the `mean (rm)` station
+* Stagger angles are generated with `FreeVortex` (will support more in the future) 
+* Blade `airfoil` is only a Double Circular Arc at the moment since other geometries haven't been implemented
+* `incidence (i)` and `deviation (delta)` values are defaulted 0 (will get Johnson Method working, but at the moment it is disabled)
+
+There are plans later to make the classes that make calculations
+extendable for certain circumstances
+
+
 # Setup
 ```
 pip install --pre cadquery
@@ -32,4 +46,4 @@ pip install jupyter-cadquery==3.4.0 cadquery-massembly==1.0.0rc0 # for viewing i
 ```
 
 # Help Wanted
-Right now there are some items such as verifying calculations, CFD analysis, and adding additional logic for blade analysis. View [Projects](https://github.com/orgs/Turbodesigner/projects/1) tab for specific asks. Please join the [Discord](https://discord.gg/H7qRauGkQ6) for project communications and collaboration.
+Right now there are some items such as verifying calculations, CFD analysis, and adding additional logic for blade analysis. View [Projects](https://github.com/orgs/Turbodesigner/projects/1) tab for specific asks. Please join the [Discord](https://discord.gg/H7qRauGkQ6) for project communications and collaboration. Please consider donating to the [Patreon](https://www.patreon.com/turbodesigner) to support future work on this project.

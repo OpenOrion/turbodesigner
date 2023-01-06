@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Optional
+from typing import Optional, Union
 import plotly.graph_objects as go
 import numpy as np
 from turbodesigner.airfoils.common import get_staggered_coords
@@ -34,7 +34,7 @@ class DCAAirfoil:
     def center(self):
         return self.get_camber_line(0)
 
-    def get_camber_line(self, xc:Optional[float | np.ndarray] = None, num_points = 20):
+    def get_camber_line(self, xc:Optional[Union[float, np.ndarray]] = None, num_points = 20):
         """coordinates of camber line (length)
 
             num_points: int

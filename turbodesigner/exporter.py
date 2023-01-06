@@ -1,37 +1,56 @@
-from typing import Callable, Dict
+from typing import Callable, Optional
 import numpy as np
 import pandas as pd
 from turbodesigner.stage import Stage
 from turbodesigner.turbomachinery import Turbomachinery
 from turbodesigner.units import DEG, BAR
 
-def get_hub_mean_tip_table(turbomachinery: Turbomachinery, on_stage: Callable[[Stage], Dict]):
+
+def get_hub_tip_dict_from_export(
+    stage: Stage, 
+    table_dict: dict[str, dict], 
+    export_dict: dict, 
+    group_name: Optional[str] = None
+):
+    for (key, value) in export_dict.items():
+        group_name = group_name or f"Stage {stage.stage_number}"
+        table_dict["Hub"][(group_name, key)] = value[0] if isinstance(value, np.ndarray) else value
+        table_dict["Mean"][(group_name, key)] = np.median(value) if isinstance(value, np.ndarray) else value
+        table_dict["Tip"][(group_name, key)] = value[-1] if isinstance(value, np.ndarray) else value
+    return table_dict
+
+def get_hub_mean_tip_table(
+    turbomachinery: Turbomachinery, 
+    to_export_dict: Callable[[Stage], dict], 
+    is_multi_row=False
+):
     table = {
         "Hub": dict(),
         "Mean": dict(),
         "Tip": dict()
     }
-    
+
     for stage in turbomachinery.stages:
-        representation = on_stage(stage)
-        for (key, value) in representation.items():
-            table["Hub"][(f"Stage {stage.stage_number}", key)] = value[0] if isinstance(value, np.ndarray) else value
-            table["Mean"][(f"Stage {stage.stage_number}", key)] = np.median(value) if isinstance(value, np.ndarray) else value
-            table["Tip"][(f"Stage {stage.stage_number}", key)] = value[-1] if isinstance(value, np.ndarray) else value
+        export_dict = to_export_dict(stage)
+        if is_multi_row:
+            table = get_hub_tip_dict_from_export(stage, table, export_dict["Rotor"], f"Stage {stage.stage_number} - Rotor")
+            table = get_hub_tip_dict_from_export(stage, table, export_dict["Stator"], f"Stage {stage.stage_number} - Stator")
+        else:
+            table = get_hub_tip_dict_from_export(stage, table, export_dict)
 
     return pd.DataFrame(table)
 
 
-def get_rotor_stator_table(turbomachinery: Turbomachinery, on_stage: Callable[[Stage], Dict]):
-    table = dict()    
+def get_rotor_stator_table(turbomachinery: Turbomachinery, to_export_dict: Callable[[Stage], dict]):
+    table_dict = dict()
     for stage in turbomachinery.stages:
-        representation = on_stage(stage)
-        for (key, value) in representation.items():
-            if key not in table:
-                table[key] = dict()
-            table[key][(f"Stage {stage.stage_number}", "Rotor")] = value["Rotor"]
-            table[key][(f"Stage {stage.stage_number}", "Stator")] = value["Stator"]
-    return pd.DataFrame(table)
+        export_dict = to_export_dict(stage)
+        for (key, value) in export_dict.items():
+            if key not in table_dict:
+                table_dict[key] = dict()
+            table_dict[key][(f"Stage {stage.stage_number}", "Rotor")] = value["Rotor"]
+            table_dict[key][(f"Stage {stage.stage_number}", "Stator")] = value["Stator"]
+    return pd.DataFrame(table_dict)
 
 
 class TurbomachineryExporter:
@@ -44,12 +63,12 @@ class TurbomachineryExporter:
             "Rs (J/(kgK))": turbomachinery.Rs,
             "mdot (kg/s)": turbomachinery.mdot,
             "PR (dimensionless)": turbomachinery.PR,
-            "P01 (Pa)": turbomachinery.P01,
+            "P01 (bar)": turbomachinery.P01*BAR,
             "T01 (K)": turbomachinery.T01,
             "eta_isen (dimensionless)": turbomachinery.eta_isen,
             "eta_poly (dimensionless)": turbomachinery.eta_poly,
-            "N_stg": turbomachinery.N_stg,                             
-            "B_in (dimensionless)":  turbomachinery.B_in,                     
+            "N_stg": turbomachinery.N_stg,
+            "B_in (dimensionless)":  turbomachinery.B_in,
             "B_out (dimensionless)": turbomachinery.B_out,
             "ht (dimensionless)": turbomachinery.ht,
         }
@@ -62,8 +81,9 @@ class TurbomachineryExporter:
                 {
                     "Stage": stage.stage_number,
                     "Delta_T0 (K)": stage.Delta_T0,
-                    "R (dimensionless)": stage.R,
+                    "Delta_h0 (J/kg)": stage.Delta_h0,
                     "PR (dimensionless)": stage.PR,
+                    "R (dimensionless)": stage.R,
                     "phi (dimensionless)": stage.phi,
                     "psi (dimensionless)": stage.psi
                 }
@@ -78,14 +98,19 @@ class TurbomachineryExporter:
                 {
                     "Stage": stage.stage_number,
                     "T01 (K)": stage.inlet_flow_station.T0,
-                    "T1 (K)": stage.inlet_flow_station.T,
                     "P01 (bar)": stage.inlet_flow_station.P0 * BAR,
+                    "H01 (J/kg*K)": stage.inlet_flow_station.H0,
+                    "T1 (K)": stage.inlet_flow_station.T,
                     "P1 (bar)": stage.inlet_flow_station.P * BAR,
+                    "H1 (K)": stage.inlet_flow_station.H,
                     "rho1 (kg/m^3)": stage.inlet_flow_station.rho,
+
                     "T02 (K)": stage.mid_flow_station.T0,
-                    "T2 (K)": stage.mid_flow_station.T,
                     "P02 (bar)": stage.mid_flow_station.P0 * BAR,
+                    "H02 (J/kg*K)": stage.mid_flow_station.H0,
+                    "T2 (K)": stage.mid_flow_station.T,
                     "P2 (bar)": stage.mid_flow_station.P * BAR,
+                    "H2 (K)": stage.mid_flow_station.H,
                     "rho2 (kg/m^3)": stage.mid_flow_station.rho,
                 }
                 for stage in turbomachinery.stages
@@ -96,7 +121,7 @@ class TurbomachineryExporter:
     def annulus(turbomachinery: Turbomachinery):
         return get_rotor_stator_table(
             turbomachinery,
-            lambda stage : {
+            lambda stage: {
                 "rh (m)": {
                     "Rotor": stage.rotor.rh,
                     "Stator": stage.stator.rh,
@@ -112,26 +137,25 @@ class TurbomachineryExporter:
             }
         )
 
-
     @staticmethod
     def velocity_triangle(turbomachinery: Turbomachinery):
         return get_hub_mean_tip_table(
             turbomachinery,
-            lambda stage : {
-                    "cx (m/s)": stage.rotor.flow_station.Vm,
-                    "U (m/s)": stage.rotor.flow_station.U,
-                    "ctheta1 (m/s)": stage.rotor.flow_station.ctheta,
-                    "c1 (m/s)": stage.rotor.flow_station.c,
-                    "wtheta1 (m/s)": stage.rotor.flow_station.wtheta,
-                    "w1 (m/s)": stage.rotor.flow_station.w,
-                    "beta1 (deg)": stage.rotor.flow_station.beta * DEG,
-                    "alpha1 (deg)": stage.rotor.flow_station.alpha * DEG,
-                    "ctheta2 (m/s)": stage.rotor.flow_station.ctheta,
-                    "c2 (m/s)": stage.rotor.flow_station.c,
-                    "wtheta2 (m/s)": stage.rotor.flow_station.wtheta,
-                    "w2 (m/s)": stage.rotor.flow_station.w,
-                    "beta2 (deg)": stage.rotor.flow_station.beta * DEG,
-                    "alpha2 (deg)": stage.rotor.flow_station.alpha * DEG,
+            lambda stage: {
+                "cx (m/s)": stage.rotor.flow_station.Vm,
+                "U (m/s)": stage.rotor.flow_station.U,
+                "ctheta1 (m/s)": stage.rotor.flow_station.ctheta,
+                "c1 (m/s)": stage.rotor.flow_station.c,
+                "wtheta1 (m/s)": stage.rotor.flow_station.wtheta,
+                "w1 (m/s)": stage.rotor.flow_station.w,
+                "beta1 (deg)": stage.rotor.flow_station.beta * DEG,
+                "alpha1 (deg)": stage.rotor.flow_station.alpha * DEG,
+                "ctheta2 (m/s)": stage.stator.flow_station.ctheta,
+                "c2 (m/s)": stage.stator.flow_station.c,
+                "wtheta2 (m/s)": stage.stator.flow_station.wtheta,
+                "w2 (m/s)": stage.stator.flow_station.w,
+                "beta2 (deg)": stage.stator.flow_station.beta * DEG,
+                "alpha2 (deg)": stage.stator.flow_station.alpha * DEG,
             }
         )
 
@@ -139,19 +163,28 @@ class TurbomachineryExporter:
     def blade_angles(turbomachinery: Turbomachinery):
         return get_hub_mean_tip_table(
             turbomachinery,
-            lambda stage : {
+            lambda stage: {
+                "Rotor": {
                     "kappa1 (deg)": stage.rotor.metal_angles.kappa1 * DEG,
                     "kappa2 (deg)": stage.rotor.metal_angles.kappa2 * DEG,
                     "theta (deg)": stage.rotor.metal_angles.theta * DEG,
                     "xi (deg)": stage.rotor.metal_angles.xi * DEG,
-            }
+                },
+                "Stator": {
+                    "kappa1 (deg)": stage.stator.metal_angles.kappa1 * DEG,
+                    "kappa2 (deg)": stage.stator.metal_angles.kappa2 * DEG,
+                    "theta (deg)": stage.stator.metal_angles.theta * DEG,
+                    "xi (deg)": stage.stator.metal_angles.xi * DEG,
+                }
+            },
+            is_multi_row=True
         )
 
     @staticmethod
     def blade_properties(turbomachinery: Turbomachinery):
         return get_rotor_stator_table(
             turbomachinery,
-            lambda stage : {
+            lambda stage: {
                 "sc (dimensionless)": {
                     "Rotor": stage.rotor.sc,
                     "Stator": stage.stator.sc,
@@ -178,5 +211,3 @@ class TurbomachineryExporter:
                 }
             }
         )
-
-
