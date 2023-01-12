@@ -7,9 +7,9 @@ from turbodesigner.units import DEG, BAR
 
 
 def get_hub_tip_dict_from_export(
-    stage: Stage, 
-    table_dict: dict[str, dict], 
-    export_dict: dict, 
+    stage: Stage,
+    table_dict: dict[str, dict],
+    export_dict: dict,
     group_name: Optional[str] = None
 ):
     for (key, value) in export_dict.items():
@@ -19,9 +19,10 @@ def get_hub_tip_dict_from_export(
         table_dict["Tip"][(group_name, key)] = value[-1] if isinstance(value, np.ndarray) else value
     return table_dict
 
+
 def get_hub_mean_tip_table(
-    turbomachinery: Turbomachinery, 
-    to_export_dict: Callable[[Stage], dict], 
+    turbomachinery: Turbomachinery,
+    to_export_dict: Callable[[Stage], dict],
     is_multi_row=False
 ):
     table = {
@@ -63,8 +64,8 @@ class TurbomachineryExporter:
             "Rs (J/(kgK))": turbomachinery.Rs,
             "mdot (kg/s)": turbomachinery.mdot,
             "PR (dimensionless)": turbomachinery.PR,
-            "P01 (bar)": turbomachinery.P01*BAR,
-            "T01 (K)": turbomachinery.T01,
+            "Pt1 (bar)": turbomachinery.Pt*BAR,
+            "Tt1 (K)": turbomachinery.Tt,
             "eta_isen (dimensionless)": turbomachinery.eta_isen,
             "eta_poly (dimensionless)": turbomachinery.eta_poly,
             "N_stg": turbomachinery.N_stg,
@@ -80,8 +81,8 @@ class TurbomachineryExporter:
             [
                 {
                     "Stage": stage.stage_number,
-                    "Delta_T0 (K)": stage.Delta_T0,
-                    "Delta_h0 (J/kg)": stage.Delta_h0,
+                    "Delta_Tt (K)": stage.Delta_Tt,
+                    "Delta_ht (J/kg)": stage.Delta_ht,
                     "PR (dimensionless)": stage.PR,
                     "R (dimensionless)": stage.R,
                     "phi (dimensionless)": stage.phi,
@@ -97,20 +98,20 @@ class TurbomachineryExporter:
             [
                 {
                     "Stage": stage.stage_number,
-                    "T01 (K)": stage.inlet_flow_station.T0,
-                    "P01 (bar)": stage.inlet_flow_station.P0 * BAR,
-                    "H01 (J/kg*K)": stage.inlet_flow_station.H0,
+                    "Tt1 (K)": stage.inlet_flow_station.Tt,
+                    "Pt1 (bar)": stage.inlet_flow_station.Pt * BAR,
+                    "ht1 (J/kg*K)": stage.inlet_flow_station.ht,
                     "T1 (K)": stage.inlet_flow_station.T,
                     "P1 (bar)": stage.inlet_flow_station.P * BAR,
-                    "H1 (K)": stage.inlet_flow_station.H,
+                    "H1 (K)": stage.inlet_flow_station.h,
                     "rho1 (kg/m^3)": stage.inlet_flow_station.rho,
 
-                    "T02 (K)": stage.mid_flow_station.T0,
-                    "P02 (bar)": stage.mid_flow_station.P0 * BAR,
-                    "H02 (J/kg*K)": stage.mid_flow_station.H0,
+                    "Tt2 (K)": stage.mid_flow_station.Tt,
+                    "Pt2 (bar)": stage.mid_flow_station.Pt * BAR,
+                    "ht2 (J/kg*K)": stage.mid_flow_station.ht,
                     "T2 (K)": stage.mid_flow_station.T,
                     "P2 (bar)": stage.mid_flow_station.P * BAR,
-                    "H2 (K)": stage.mid_flow_station.H,
+                    "H2 (K)": stage.mid_flow_station.h,
                     "rho2 (kg/m^3)": stage.mid_flow_station.rho,
                 }
                 for stage in turbomachinery.stages
@@ -142,18 +143,18 @@ class TurbomachineryExporter:
         return get_hub_mean_tip_table(
             turbomachinery,
             lambda stage: {
-                "cx (m/s)": stage.rotor.flow_station.Vm,
+                "Vm (m/s)": stage.rotor.flow_station.Vm,
                 "U (m/s)": stage.rotor.flow_station.U,
-                "ctheta1 (m/s)": stage.rotor.flow_station.ctheta,
-                "c1 (m/s)": stage.rotor.flow_station.c,
-                "wtheta1 (m/s)": stage.rotor.flow_station.wtheta,
-                "w1 (m/s)": stage.rotor.flow_station.w,
+                "Vθ1 (m/s)": stage.rotor.flow_station.Vtheta,
+                "V1 (m/s)": stage.rotor.flow_station.V,
+                "Wθ1 (m/s)": stage.rotor.flow_station.Wtheta,
+                "W1 (m/s)": stage.rotor.flow_station.W,
                 "beta1 (deg)": stage.rotor.flow_station.beta * DEG,
                 "alpha1 (deg)": stage.rotor.flow_station.alpha * DEG,
-                "ctheta2 (m/s)": stage.stator.flow_station.ctheta,
-                "c2 (m/s)": stage.stator.flow_station.c,
-                "wtheta2 (m/s)": stage.stator.flow_station.wtheta,
-                "w2 (m/s)": stage.stator.flow_station.w,
+                "Vθ2 (m/s)": stage.stator.flow_station.Vtheta,
+                "V2 (m/s)": stage.stator.flow_station.V,
+                "Wθ2 (m/s)": stage.stator.flow_station.Wtheta,
+                "W2 (m/s)": stage.stator.flow_station.W,
                 "beta2 (deg)": stage.stator.flow_station.beta * DEG,
                 "alpha2 (deg)": stage.stator.flow_station.alpha * DEG,
             }
