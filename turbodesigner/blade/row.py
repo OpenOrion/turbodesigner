@@ -1,9 +1,9 @@
 from enum import Enum
 from functools import cached_property
 from dataclasses import dataclass
-from typing import Optional
+from typing import Literal, Optional
 from turbodesigner.airfoils import AirfoilType, DCAAirfoil
-from turbodesigner.blade.deviation.johnson import JohnsonBladeDeviation
+from turbodesigner.blade.metal_angle_methods.johnsen_bullock import JohnsenBullockMetalAngleMethod
 from turbodesigner.blade.metal_angles import MetalAngles
 from turbodesigner.blade.vortex.common import Vortex
 from turbodesigner.flow_station import FlowStation
@@ -11,6 +11,7 @@ from turbodesigner.attachments.firetree import FirtreeAttachment
 import numpy as np
 import numpy.typing as npt
 from turbodesigner.units import MM
+MetalAngleMethods = Literal["EqualsFlowAngles", "JohnsenBullock"]
 
 
 @dataclass
@@ -83,6 +84,9 @@ class BladeRow:
     N_stream: int
     "number of streams per blade (dimensionless)"
 
+    metal_angle_method: MetalAngleMethods
+    "metal angle method"
+
     next_stage_flow_station: Optional["FlowStation"] = None
     "next blade row flow station"
 
@@ -90,7 +94,7 @@ class BladeRow:
     "nominal deviation iterations"
 
     def __post_init__(self):
-        assert self.N_stream % 2 != 0, "N_stream must be an odd number" 
+        assert self.N_stream % 2 != 0, "N_stream must be an odd number"
         if self.is_rotating and self.next_stage_flow_station is None:
             self.next_stage_flow_station = self.stage_flow_station.copyStream(
                 alpha=self.vortex.alpha(self.radii, is_rotating=False),
@@ -172,7 +176,6 @@ class BladeRow:
         "Reynold's number of blade chord (dimensionless)"
         return self.stage_flow_station.rho * self.stage_flow_station.Vm * (self.c / self.stage_flow_station.mu)
 
-
     @cached_property
     def airfoil_type(self):
         # if self.stage_flow_station.MN < 0.7:
@@ -185,13 +188,13 @@ class BladeRow:
         return AirfoilType.DCA
 
     @cached_property
-    def deviation(self):
-        return JohnsonBladeDeviation(self.beta1, self.beta2, self.sigma, self.tbc, self.airfoil_type)
-
-    @cached_property
     def metal_angles(self):
-        # metal_angles = self.deviation.get_metal_angles(self.deviation_iterations)
-        # return metal_angles
+        if self.metal_angle_method == "JohnsenBullock":
+            # beta1_rm: float = np.median(self.beta1)  # type: ignore
+            # beta2_rm: float = np.median(self.beta2)  # type: ignore
+            method_angle_method = JohnsenBullockMetalAngleMethod(self.beta1, self.beta2, self.sigma, self.tbc, self.airfoil_type)
+            metal_angle_offset = method_angle_method.get_metal_angle_offset(self.deviation_iterations)
+            return MetalAngles(self.beta1, self.beta2, metal_angle_offset.i, metal_angle_offset.delta)
         return MetalAngles(self.beta1, self.beta2, 0, 0)
 
     @cached_property
@@ -216,7 +219,6 @@ class BladeRow:
             radius=self.radii
         )
 
-
     @cached_property
     def beta1(self):
         "blade inlet flow angle (rad)"
@@ -233,8 +235,8 @@ class BladeRow:
 
         assert self.next_stage_flow_station is not None or self.vortex.Rm == 0.5, "next_flow_station needs to be defined or Rc=0.5"
         if self.next_stage_flow_station is not None:
-            return self.next_stage_flow_station.alpha                     # alpha3
-        return self.vortex.alpha(self.radii, is_rotating=False)     # alpha3
+            return self.next_stage_flow_station.alpha                                    # alpha3
+        return self.vortex.alpha(self.radii, is_rotating=not self.is_rotating)           # alpha3
 
     @cached_property
     def DF(self):

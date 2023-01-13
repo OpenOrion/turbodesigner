@@ -30,11 +30,8 @@ class DCAAirfoil:
             self.theta = 1E-5
         self.theta_mag = np.abs(self.theta)
 
-    @cached_property
-    def center(self):
-        return self.get_camber_line(0)
 
-    def get_camber_line(self, xc:Optional[Union[float, np.ndarray]] = None, num_points = 20):
+    def get_camber_line(self, xc:Optional[Union[float, np.ndarray]] = None, is_staggered: bool = True, is_centered: bool = True,  num_points = 20):
         """coordinates of camber line (length)
 
             num_points: int
@@ -43,18 +40,23 @@ class DCAAirfoil:
         # horizontal position of camber or chord line (length)
         if xc is None:
             xc = np.linspace(-self.c/2, self.c/2, num_points, endpoint=True)
-
+        y_sign = np.sign(self.theta)
         # radius of curvature (length)
         Rc = (self.c/2) * (1/(np.sin(self.theta/2)))
         
         # camber line y-coordinate origin of radius (length)
         yc0 = -Rc * np.cos(self.theta/2)
         
-        # vertical position of camber or chord line (length)
-        yc = yc0 + np.sqrt(Rc**2 - xc**2) * np.sign(self.theta)
+        # vertical position of camber of chord line (length)
+        yc = yc0 + np.sqrt(Rc**2 - xc**2) * y_sign
 
         camber_line = np.array([xc,yc]).T
 
+        if is_centered:
+            camber_line = camber_line - np.array([0,yc0 + np.sqrt(Rc**2) * y_sign])
+
+        if is_staggered:
+            camber_line = get_staggered_coords(camber_line, self.xi)
         return camber_line
 
     def get_circle(self, is_left: bool, num_points: int):
@@ -107,7 +109,7 @@ class DCAAirfoil:
 
         y = np.sign(self.theta) * (y0 + np.sqrt(R**2 - x**2))
 
-        if is_lower and np.abs(y[0]) > self.tb/2:
+        if is_lower and np.abs(y[0]) > self.tb*2:
             y = -np.sign(self.theta) * np.ones(num_points) * self.r0
 
         return np.array([x,y]).T
@@ -140,6 +142,7 @@ class DCAAirfoil:
         upper_cond = np.where(np.logical_and(upper_arc[:,0] > left_circle[0,0], upper_arc[:,0] < right_circle[-1,0]))
         lower_cond = np.where(np.logical_and(lower_arc[:,0] > left_circle[-1,0], lower_arc[:,0] < right_circle[0,0]))
         
+        center = self.get_camber_line(0, is_staggered=False, is_centered=False)
         airfoil = np.concatenate(
             [
                 left_circle, 
@@ -148,7 +151,7 @@ class DCAAirfoil:
                 np.flip(upper_arc[upper_cond], axis=0), 
                 left_circle_start
             ]
-        ) - self.center
+        ) - center
 
         return get_staggered_coords(airfoil, self.xi)
 
@@ -159,8 +162,13 @@ class DCAAirfoil:
         num_arc_points: int = 20, 
         num_circle_points: int = 10
     ):
+        camber_xy = self.get_camber_line(num_points=num_arc_points)
+        fig.add_trace(go.Scatter(
+            x=camber_xy[:, 0],
+            y=camber_xy[:, 1],
+        ))
+
         xy = self.get_coords(num_arc_points, num_circle_points)
-        
         fig.add_trace(go.Scatter(
             x=xy[:, 0],
             y=xy[:, 1],

@@ -166,12 +166,16 @@ class TurbomachineryExporter:
             turbomachinery,
             lambda stage: {
                 "Rotor": {
+                    "delta (deg)": stage.rotor.metal_angles.delta * DEG,
+                    "i (deg)": stage.rotor.metal_angles.i * DEG,
                     "kappa1 (deg)": stage.rotor.metal_angles.kappa1 * DEG,
                     "kappa2 (deg)": stage.rotor.metal_angles.kappa2 * DEG,
                     "theta (deg)": stage.rotor.metal_angles.theta * DEG,
                     "xi (deg)": stage.rotor.metal_angles.xi * DEG,
                 },
                 "Stator": {
+                    "delta (deg)": stage.stator.metal_angles.delta * DEG,
+                    "i (deg)": stage.stator.metal_angles.i * DEG,
                     "kappa1 (deg)": stage.stator.metal_angles.kappa1 * DEG,
                     "kappa2 (deg)": stage.stator.metal_angles.kappa2 * DEG,
                     "theta (deg)": stage.stator.metal_angles.theta * DEG,

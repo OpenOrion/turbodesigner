@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import json
 from typing import Literal, Union
 import numpy as np
+from turbodesigner.blade.row import MetalAngleMethods
 from turbodesigner.flow_station import FlowStation
 from turbodesigner.stage import Stage, StageBladeProperty, StageCadExport
 from dacite.core import from_dict
@@ -79,6 +80,9 @@ class Turbomachinery:
 
     tbc: Union[StageBladeProperty, list[StageBladeProperty]]
     "max thickness to chords (dimensionless)"
+
+    metal_angle_method: MetalAngleMethods = "JohnsenBullock"
+    "metal angle method"
 
     @cached_property
     def Tt2(self):
@@ -172,7 +176,8 @@ class Turbomachinery:
                 sc=self.sc[i] if isinstance(self.sc, list) else self.sc,
                 tbc=self.tbc[i] if isinstance(self.tbc, list) else self.tbc,
                 rgc=self.rgc[i] if isinstance(self.rgc, list) else self.rgc,
-                sgc=self.sgc[i] if isinstance(self.sgc, list) else self.sgc
+                sgc=self.sgc[i] if isinstance(self.sgc, list) else self.sgc,
+                metal_angle_method=self.metal_angle_method
             )
             previous_flow_station = stage.mid_flow_station
             if i > 0 and i < self.N_stg:

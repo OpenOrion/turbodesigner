@@ -5,8 +5,19 @@ import numpy as np
 from turbodesigner.airfoils import AirfoilType
 from turbodesigner.blade.metal_angles import MetalAngles
 
+
 @dataclass
-class JohnsonBladeDeviation:
+class MetalAngleOffset:
+    i: Union[float, np.ndarray]
+    "blade incidence (rad)"
+
+    delta: Union[float, np.ndarray]
+    "blade deviation (rad)"
+
+
+@dataclass
+class JohnsenBullockMetalAngleMethod:
+    "Johnsen and Bullock 1965"
 
     beta1: Union[float, np.ndarray]
     "inlet flow angle (rad)"
@@ -32,8 +43,8 @@ class JohnsonBladeDeviation:
         "blade shape paramter (dimensionless)"
         match self.airfoil_type:
             case AirfoilType.NACA65: return 1.0
-            case AirfoilType.DCA:    return 0.7
-            case AirfoilType.C4:     return 1.1
+            case AirfoilType.DCA: return 0.7
+            case AirfoilType.C4: return 1.1
 
     @cached_property
     def n(self):
@@ -74,7 +85,7 @@ class JohnsonBladeDeviation:
     def i_star_0_10(self):
         "nominal incidence angle theta=0, tbc=0.10 (deg)"
         # seal pitch (dimensionless)
-        p = (1/160)*self.sigma**3 + 0.914 
+        p = (1/160)*self.sigma**3 + 0.914
         return ((self.beta1_deg**p)/(5 + 46*np.exp(-2.3*self.sigma))) - 0.1*self.sigma**3*np.exp((self.beta1_deg - 70)/4)
 
     def get_i_star_deg(self, theta_deg: Union[float, np.ndarray]):
@@ -85,7 +96,7 @@ class JohnsonBladeDeviation:
         "nominal deviation angle (deg)"
         return self.Ksh*self.Ktdelta*self.delta_star_0_10 + theta_deg*self.m
 
-    def get_metal_angles(self, iterations: int):
+    def get_metal_angle_offset(self, iterations: int):
         i_star_deg, delta_star_deg = 0, 0
         # TODO: make this more efficient with Numba
         for _ in range(iterations):
@@ -93,7 +104,7 @@ class JohnsonBladeDeviation:
             theta_deg = metal_angles_deg.theta
             i_star_deg = self.get_i_star_deg(theta_deg)
             delta_star_deg = self.get_delta_star_deg(theta_deg)
-            
+
         i = np.radians(i_star_deg) * np.sign(self.beta1)
         delta = np.radians(delta_star_deg) * np.sign(self.beta2)
-        return MetalAngles(self.beta1, self.beta2, i, delta)
+        return MetalAngleOffset(i, delta)
