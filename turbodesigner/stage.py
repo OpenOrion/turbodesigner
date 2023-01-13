@@ -2,7 +2,7 @@ from functools import cached_property
 from dataclasses import dataclass
 from typing import Optional
 import numpy as np
-from turbodesigner.blade.row import BladeRow, BladeRowCadExport
+from turbodesigner.blade.row import BladeRow, BladeRowCadExport, MetalAngleMethods
 from turbodesigner.blade.vortex.free_vortex import FreeVortex
 from turbodesigner.flow_station import FlowStation
 from turbodesigner.units import MM
@@ -71,6 +71,9 @@ class Stage:
 
     sgc: float
     "stage gap to chord (dimensionless)"
+
+    metal_angle_method: MetalAngleMethods
+    "metal angle method"
 
     next_stage: Optional["Stage"] = None
     "next turbomachinery stage"
@@ -163,6 +166,7 @@ class Stage:
             tbc=self.tbc.rotor,
             is_rotating=True,
             N_stream=self.N_stream,
+            metal_angle_method=self.metal_angle_method,
             next_stage_flow_station=self.stator.flow_station
         )
 
@@ -177,6 +181,7 @@ class Stage:
             tbc=self.tbc.stator,
             is_rotating=False,
             N_stream=self.N_stream,
+            metal_angle_method=self.metal_angle_method,
             next_stage_flow_station=None if self.next_stage is None else self.next_stage.rotor.flow_station
         )
 
