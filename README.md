@@ -39,7 +39,15 @@ extendable for certain circumstances
 
 
 # Setup
+
+## Open in Gitpod
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/github.com/Turbodesigner/turbodesigner)
+
+or 
+
 ```
+git clone https://github.com/Turbodesigner/turbodesigner.git
+cd turbodesigner
 pip install --pre cadquery
 pip install -r requirements.txt
 pip install jupyter-cadquery==3.4.0 cadquery-massembly==1.0.0rc0 # for viewing in Jupyter
