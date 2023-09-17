@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cached_property
 import cadquery as cq
 import numpy as np
@@ -23,7 +23,7 @@ class BladeCadModel:
     blade_row: BladeRowCadExport
     "blade row"
 
-    spec: BladeCadModelSpecification = BladeCadModelSpecification()
+    spec: BladeCadModelSpecification = field(default_factory=BladeCadModelSpecification)
     "blade cad model specification"
 
     @cached_property
