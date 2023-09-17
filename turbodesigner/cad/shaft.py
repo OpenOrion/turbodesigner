@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cached_property
 from typing import Optional
 import cadquery as cq
@@ -40,7 +40,7 @@ class ShaftCadModel:
     next_stage: Optional[StageCadExport] = None
     "next turbomachinery stage"
 
-    spec: ShaftCadModelSpecification = ShaftCadModelSpecification()
+    spec: ShaftCadModelSpecification = field(default_factory=ShaftCadModelSpecification)
     "shaft cad model specification"
 
     def __post_init__(self):

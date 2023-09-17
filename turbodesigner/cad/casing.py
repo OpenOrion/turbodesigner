@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cached_property
 from typing import Optional
 from turbodesigner.cad.blade import BladeCadModel, BladeCadModelSpecification
@@ -44,7 +44,7 @@ class CasingCadModel:
     previous_stage: Optional[StageCadExport] = None
     "turbomachinery next stage"
 
-    spec: CasingCadModelSpecifciation = CasingCadModelSpecifciation()
+    spec: CasingCadModelSpecifciation = field(default_factory=CasingCadModelSpecifciation)
     "casing cad model specification"
 
     def __post_init__(self):
