@@ -91,13 +91,14 @@ class ShaftCadModel:
 
         return shaft_sector_profile
 
-    @cached_property
+    @property
     def shaft_stage_assembly(self):
-        base_assembly = cq.Assembly()
-        blade_assembly = cq.Assembly()
-        fastener_assembly = cq.Assembly()
+        shaft_assembly = cq.Assembly(name="shaft")
+        blade_row_assembly = cq.Assembly(name="blade-row")
+        blade_locks_assembly = cq.Assembly(name="blade-locks")
+        shaft_connect_assembly = cq.Assembly(name="shaft-connect")
 
-        shaft_profile = (
+        rotor_profile = (
             ExtendedWorkplane("XY")
             # Stator Disk
             .circle(self.stage.stator.hub_radius)
@@ -120,8 +121,8 @@ class ShaftCadModel:
         )
 
         if not self.spec.is_simple:
-            shaft_profile = (
-                shaft_profile
+            rotor_profile = (
+                rotor_profile
 
                 # Cut Attachments - TODO: make this operation faster
                 .faces(">Z")
@@ -153,19 +154,19 @@ class ShaftCadModel:
                 .workplane(offset=-self.stage_connect_height-self.blade_cad_model.lock_screw.head_diameter*1.5)
                 .polarArray(self.stage_connect_inner_radius, 0, 360, self.stage.rotor.number_of_blades)
                 .mutatePoints(lambda loc: loc * cq.Location(cq.Vector(0, 0, 0), cq.Vector(0, 1, 0), -90))
-                .clearanceHole(self.blade_cad_model.lock_screw, fit="Loose", baseAssembly=fastener_assembly)
+                .clearanceHole(self.blade_cad_model.lock_screw, fit="Loose", baseAssembly=blade_locks_assembly)
 
                 # Shaft Connect Heatsets
                 .faces(">Z")
                 .workplane(offset=-self.stage_connect_height/2)
                 .polarArray(self.stage_connect_outer_radius, 0, 360, self.spec.stage_connect_screw_quantity)
                 .mutatePoints(lambda loc: loc * cq.Location(cq.Vector(0, 0, 0), cq.Vector(0, 1, 0), 90))
-                .insertHole(self.stage_connect_heatset, fit="Loose", baseAssembly=fastener_assembly, depth=self.stage_connect_heatset.nut_thickness)
+                .insertHole(self.stage_connect_heatset, fit="Loose", baseAssembly=shaft_connect_assembly, depth=self.stage_connect_heatset.nut_thickness)
             )
             if self.next_stage_shaft_cad_model:
-                shaft_profile = (
+                rotor_profile = (
                     # Next Shaft Female Connect
-                    shaft_profile
+                    rotor_profile
                     .faces("<Z")
                     .workplane()
                     .circle(self.next_stage_shaft_cad_model.stage_connect_outer_radius + self.spec.stage_connect_clearance)
@@ -176,7 +177,7 @@ class ShaftCadModel:
                     .workplane(offset=-self.next_stage_shaft_cad_model.stage_connect_height/2)
                     .polarArray(self.next_stage_shaft_cad_model.stage.rotor.hub_radius, 0, 360, self.spec.stage_connect_screw_quantity)
                     .mutatePoints(lambda loc: loc * cq.Location(cq.Vector(0, 0, 0), cq.Vector(0, 1, 0), 90))
-                    .clearanceHole(self.next_stage_stage_connect_screw, fit="Loose", baseAssembly=fastener_assembly)
+                    .clearanceHole(self.next_stage_stage_connect_screw, fit="Loose", baseAssembly=shaft_connect_assembly)
                 )
 
         blade_vertical_offset = self.stage.stage_gap+self.stage.stator.disk_height+self.stage.row_gap+self.stage.rotor.disk_height/2
@@ -189,12 +190,14 @@ class ShaftCadModel:
 
         for (i, blade_assembly_loc) in enumerate(blade_assembly_locs):
             assert isinstance(blade_assembly_loc, cq.Location)
-            blade_assembly.add(self.blade_cad_model.blade_assembly, loc=blade_assembly_loc, name=f"Blade {i+1}")
+            blade_row_assembly.add(self.blade_cad_model.blade_assembly, loc=blade_assembly_loc, name=f"blade{i}")
 
-        base_assembly.add(shaft_profile, name=f"Stage Shaft")
-        base_assembly.add(blade_assembly, name="Blades")
-        base_assembly.add(fastener_assembly, name="Fasteners")
-        return base_assembly
+        shaft_assembly.add(blade_row_assembly)
+        shaft_assembly.add(rotor_profile, name="rotor")
+        shaft_assembly.add(shaft_connect_assembly)
+        if not self.spec.is_simple:
+            shaft_assembly.add(blade_locks_assembly)
+        return shaft_assembly
 
     @staticmethod
     def shaft_assembly(turbomachinery: TurbomachineryCadExport, spec: ShaftCadModelSpecification = ShaftCadModelSpecification()):

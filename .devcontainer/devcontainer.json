@@ -1,22 +1,30 @@
 {
 	"name": "Python 3",
+	"features": {
+		"ghcr.io/devcontainers-contrib/features/pipx-package:1": {},
+		"ghcr.io/devcontainers-contrib/features/poetry:2": {},
+		"ghcr.io/rocker-org/devcontainer-features/miniforge:1": {}
+	},
+
 	"build": {
-		"dockerfile": "Dockerfile",
+		// Sets the run context to one level up instead of the .devcontainer folder.
 		"context": "..",
-		"args": {
-			// Update 'VARIANT' to pick a Python version: 3, 3.10, 3.9, 3.8, 3.7, 3.6
-			// Append -bullseye or -buster to pin to an OS version.
-			// Use -bullseye variants on local on arm64/Apple Silicon.
-			"VARIANT": "3.10-bullseye",
-			// Options
-			"NODE_VERSION": "lts/*"
+		// Update the 'dockerFile' property if you aren't using the standard 'Dockerfile' filename.
+		"dockerfile": "./Dockerfile"
+	},
+
+
+	// Add the IDs of extensions you want installed when the container is created.
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"eamodio.gitlens",
+				"ms-toolsai.jupyter"
+			
+			]
 		}
 	},
-	// Add the IDs of extensions you want installed when the container is created.
-	"extensions": [
-		"ms-python.python",
-		"ms-python.vscode-pylance",
-		"eamodio.gitlens"
-	],
 	"remoteUser": "vscode"
 }

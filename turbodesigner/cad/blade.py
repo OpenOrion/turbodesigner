@@ -42,8 +42,7 @@ class BladeCadModel:
 
     @cached_property
     def blade_assembly(self):
-        base_assembly = cq.Assembly()
-        fastener_assembly = cq.Assembly()
+        blade_assembly = cq.Assembly(name="blade-group")
 
         start_airfoil = self.blade_row.airfoils[0]
         airfoil_vertical_offset = np.array([
@@ -93,7 +92,7 @@ class BladeCadModel:
 
             .faces("<Z" if self.blade_row.is_rotating else ">Z")
             .workplane()
-            .insertHole(self.heatset, depth=self.heatset.nut_thickness*0.9, baseAssembly=fastener_assembly)
+            .insertHole(self.heatset, depth=self.heatset.nut_thickness*0.9, baseAssembly=blade_assembly)
         )
 
         blade_profile = (
@@ -105,9 +104,9 @@ class BladeCadModel:
             blade_profile = (
                 blade_profile
                 .add(attachment_profile)
+                .combine()
             )
 
-        base_assembly.add(blade_profile, name="Blade")
-        base_assembly.add(fastener_assembly, name="Fasteners")
+        blade_assembly.add(blade_profile, name="blade")
 
-        return base_assembly
+        return blade_assembly

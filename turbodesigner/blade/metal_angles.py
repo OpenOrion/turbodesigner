@@ -31,7 +31,7 @@ class MetalAngles:
     "stagger angle (rad)"
 
     def __post_init__(self):
-        self.kappa1 = np.asfarray(self.beta1 - self.i)
-        self.kappa2 = np.asfarray(self.beta2 - self.delta)
-        self.theta = np.asfarray(self.kappa1-self.kappa2)
-        self.xi = np.asfarray((self.kappa1 + self.kappa2)/2)
+        self.kappa1 = np. asarray(self.beta1 - self.i)
+        self.kappa2 = np. asarray(self.beta2 - self.delta)
+        self.theta = np. asarray(self.kappa1-self.kappa2)
+        self.xi = np. asarray((self.kappa1 + self.kappa2)/2)
