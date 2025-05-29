@@ -1,11 +1,14 @@
+# Core dependencies
 kaleido
 plotly==5.11.0
 ipywidgets>=7.6
 jupyterlab
 matplotlib
-
 numpy
-scipy
 dacite
-git+https://github.com/gumyr/cq_warehouse.git#egg=cq_warehouse
 pandas
+
+# CAD dependencies
+cadquery
+git+https://github.com/gumyr/cq_warehouse.git
+
