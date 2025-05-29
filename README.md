@@ -26,22 +26,6 @@ To avoid feature creep or due to lack of development the following assumption ar
 There are plans later to make the classes that make calculations
 extendable for certain circumstances
 
-# Install
-
-## Basic Installation
-```
-pip install turbodesigner
-```
-
-## Installation with CAD Dependencies
-For full functionality including CAD features:
-```
-# Install the package with CAD extras
-pip install turbodesigner[cad]
-
-# Install the required git dependency manually
-pip install git+https://github.com/gumyr/cq_warehouse.git
-```
 
 ## Installation
 ```
