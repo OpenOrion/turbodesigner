@@ -41,10 +41,14 @@ class JohnsenBullockMetalAngleMethod:
     @cached_property
     def Ksh(self):
         "blade shape paramter (dimensionless)"
-        match self.airfoil_type:
-            case AirfoilType.NACA65: return 1.0
-            case AirfoilType.DCA: return 0.7
-            case AirfoilType.C4: return 1.1
+        if self.airfoil_type == AirfoilType.NACA65:
+            return 1.0
+        elif self.airfoil_type == AirfoilType.DCA:
+            return 0.7
+        elif self.airfoil_type == AirfoilType.C4:
+            return 1.1
+        else:
+            return 1.0  # Default case
 
     @cached_property
     def n(self):
@@ -62,11 +66,10 @@ class JohnsenBullockMetalAngleMethod:
         "deviation slope factor (dimensionless)"
         x = (1/100)*self.beta1_deg
 
-        match self.airfoil_type:
-            case AirfoilType.NACA65:
-                m1 = 0.333*x**2 - 0.0333*x + 0.17
-            case _:
-                m1 = 0.316*x**3 - 0.132*x**2 + 0.074*x + 0.249
+        if self.airfoil_type == AirfoilType.NACA65:
+            m1 = 0.333*x**2 - 0.0333*x + 0.17
+        else:
+            m1 = 0.316*x**3 - 0.132*x**2 + 0.074*x + 0.249
 
         b = -0.85*x**3 - 0.17*x + 0.9625
         return self.sigma**(-b)*m1
