@@ -13,11 +13,10 @@ with open("requirements.txt", "r", encoding="utf-8") as f:
         # Skip comments and empty lines
         if not line or line.startswith("#"):
             continue
-        # Handle git+ dependencies
+        # Skip git+ dependencies for PyPI compatibility
         if line.startswith("git+"):
-            # Extract package name from git URL (last part before .git)
-            pkg_name = line.split('/')[-1].split('.git')[0]
-            requirements.append(f"{pkg_name} @ {line}")
+            # Git dependencies aren't directly supported by PyPI
+            # They'll be handled through extras_require
             continue
 
         requirements.append(line)
@@ -44,7 +43,4 @@ setup(
     package_data={
         "turbodesigner": ["**/*.json"],
     },
-    dependency_links=[
-        "https://github.com/gumyr/cq_warehouse.git#egg=cq_warehouse",
-    ],
 )

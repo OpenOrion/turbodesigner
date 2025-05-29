@@ -27,7 +27,32 @@ There are plans later to make the classes that make calculations
 extendable for certain circumstances
 
 # Install
-`pip install turbodesigner`
+
+## Basic Installation
+```
+pip install turbodesigner
+```
+
+## Installation with CAD Dependencies
+For full functionality including CAD features:
+```
+# Install the package with CAD extras
+pip install turbodesigner[cad]
+
+# Install the required git dependency manually
+pip install git+https://github.com/gumyr/cq_warehouse.git
+```
+
+## Installation
+```
+# For now git+ is the only way to get cq_warehouse
+pip install git+https://github.com/gumyr/cq_warehouse.git
+
+pip install turbodesigner
+
+# Optional: To display but there is the basic Jupyter Viewer and others
+pip install jupyter-cadquery==3.4.0 cadquery-massembly==1.0.0rc0 # for viewing in Jupyter
+```
 
 
 # Setup
@@ -40,7 +65,7 @@ or
 ```
 git clone https://github.com/Turbodesigner/turbodesigner.git
 cd turbodesigner
-pip install -r requirements.txt
+pip install git+https://github.com/gumyr/cq_warehouse.git
 pip install jupyter-cadquery==3.4.0 cadquery-massembly==1.0.0rc0 # for viewing in Jupyter
 ```
 
