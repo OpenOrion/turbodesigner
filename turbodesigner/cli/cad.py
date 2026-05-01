@@ -235,7 +235,8 @@ def cad_assembly(ctx: click.Context, design_name: str | None, complex: bool, vis
 
     # Generate Bill of Materials
     from turbodesigner.cad.bom import generate_bom
-    bom_path = generate_bom(cad_export, output_dir, shaft_spec=shaft_spec, casing_spec=casing_spec)
+    bom = generate_bom(cad_export, shaft_spec=shaft_spec, casing_spec=casing_spec)
+    bom_path = bom.to_csv(output_dir / "BOM.csv")
 
     elapsed = time.perf_counter() - t0
 

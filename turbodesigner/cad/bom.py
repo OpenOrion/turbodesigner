@@ -1,28 +1,55 @@
 """Bill of Materials generation for turbomachinery CAD assemblies."""
 import csv
 from pathlib import Path
-from typing import Optional
 
-from turbodesigner.cad.blade import BladeCadModel, BladeCadModelSpecification
+from pydantic import BaseModel, Field
+
 from turbodesigner.cad.casing import CasingCadModel, CasingCadModelSpecifciation
 from turbodesigner.cad.shaft import ShaftCadModel, ShaftCadModelSpecification
 from turbodesigner.turbomachinery import TurbomachineryCadExport
 
 
+class BomEntry(BaseModel):
+    """A single line item in the Bill of Materials."""
+    part: str = Field(description="Part description")
+    quantity: int = Field(description="Total quantity required")
+    category: str = Field(description="Part category (e.g. Fastener, Blade, Shaft, Casing)")
+    component: str = Field(description="Assembly component(s) using this part")
+
+
+class BillOfMaterials(BaseModel):
+    """Full Bill of Materials for a turbomachinery assembly."""
+    entries: list[BomEntry] = Field(default_factory=list, description="All BOM line items")
+
+    def to_csv(self, output_path: Path) -> str:
+        """Write BOM to a CSV file. Returns the path as a string."""
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=["Part", "Quantity", "Category", "Component"])
+            writer.writeheader()
+            for entry in self.entries:
+                writer.writerow({
+                    "Part": entry.part,
+                    "Quantity": entry.quantity,
+                    "Category": entry.category,
+                    "Component": entry.component,
+                })
+        return str(output_path)
+
+
 def generate_bom(
     turbomachinery: TurbomachineryCadExport,
-    output_dir: Path,
     shaft_spec: ShaftCadModelSpecification = ShaftCadModelSpecification(),
     casing_spec: CasingCadModelSpecifciation = CasingCadModelSpecifciation(),
-) -> str:
-    """Generate a Bill of Materials CSV for the full assembly.
+) -> BillOfMaterials:
+    """Generate a Bill of Materials for the full assembly.
 
     Includes fasteners (heatsets, screws) and structural parts (blades, disks, casings).
 
     Returns:
-        Path to the generated BOM.csv file.
+        BillOfMaterials model. Call .to_csv(path) to persist.
     """
-    bom: dict[str, dict] = {}  # key: part description, value: {quantity, category, component}
+    bom: dict[str, BomEntry] = {}
 
     first_stage = turbomachinery.stages[0]
 
@@ -71,52 +98,37 @@ def generate_bom(
         _add_part(bom, f"Casing Section (Stage {stage_num})", 1, "Casing")
         _add_part(bom, f"Casing Clamp (Stage {stage_num})", stage.stator.number_of_blades, "Casing")
 
-    # Write CSV
-    output_dir.mkdir(parents=True, exist_ok=True)
-    bom_path = output_dir / "BOM.csv"
-
-    rows = []
-    for part_desc, info in sorted(bom.items(), key=lambda x: (x[1]["category"], x[0])):
-        rows.append({
-            "Part": part_desc,
-            "Quantity": info["quantity"],
-            "Category": info["category"],
-            "Component": info["component"],
-        })
-
-    with open(bom_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=["Part", "Quantity", "Category", "Component"])
-        writer.writeheader()
-        writer.writerows(rows)
-
-    return str(bom_path)
+    # Build sorted entries
+    entries = sorted(bom.values(), key=lambda e: (e.category, e.part))
+    return BillOfMaterials(entries=entries)
 
 
-def _add_fastener(bom: dict, fastener, quantity: int, component: str):
+def _add_fastener(bom: dict[str, BomEntry], fastener, quantity: int, component: str):
     """Add a fastener to the BOM dict, aggregating quantities."""
     info_lines = fastener.info.split("\n")
     part_desc = info_lines[0] if info_lines else str(fastener)
 
     if part_desc in bom:
-        bom[part_desc]["quantity"] += quantity
-        # Track all components that use this fastener
-        if component not in bom[part_desc]["component"]:
-            bom[part_desc]["component"] += f"; {component}"
+        bom[part_desc].quantity += quantity
+        if component not in bom[part_desc].component:
+            bom[part_desc].component += f"; {component}"
     else:
-        bom[part_desc] = {
-            "quantity": quantity,
-            "category": "Fastener",
-            "component": component,
-        }
+        bom[part_desc] = BomEntry(
+            part=part_desc,
+            quantity=quantity,
+            category="Fastener",
+            component=component,
+        )
 
 
-def _add_part(bom: dict, part_desc: str, quantity: int, category: str):
+def _add_part(bom: dict[str, BomEntry], part_desc: str, quantity: int, category: str):
     """Add a structural part to the BOM dict."""
     if part_desc in bom:
-        bom[part_desc]["quantity"] += quantity
+        bom[part_desc].quantity += quantity
     else:
-        bom[part_desc] = {
-            "quantity": quantity,
-            "category": category,
-            "component": part_desc,
-        }
+        bom[part_desc] = BomEntry(
+            part=part_desc,
+            quantity=quantity,
+            category=category,
+            component=part_desc,
+        )
