@@ -15,6 +15,9 @@ bin/CQ-editor/
 *.mod
 *.pkl
 
+# Turbodesigner CLI workspace state
+.turbodesigner/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

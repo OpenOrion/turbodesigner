@@ -1,24 +1,42 @@
 {
-    "gamma": 1.4,              
-    "cx": 136,                 
-    "N": 10000,                
-    "Rs": 287,                 
-    "mdot": 4.374433141191892,                
-    "PR": 3,                
-    "Pt": 101000,             
-    "Tt": 288,                
-    "eta_isen": 0.87848151,    
-    "N_stg": 5,                
-    "Delta_T0_stg": "equal",    
-    "R_stg": [0.5, 0.5, 0.5, 0.5, 0.5],  
-    "B_in": 0.0,                 
-    "B_out": 0.0,                
-    "ht": 0.5,                 
-    "N_stream": 9,    
-    "AR": {"rotor": 3.0, "stator": 3.25},
-    "sc": {"rotor": 1.0, "stator": 1.0},
-    "tbc": {"rotor": 0.1, "stator": 0.1},
-    "rgc": 0.25,
-    "sgc": 0.5
+    "machine_type": "axial",
+    "configuration": "compressor",
+    "definition": {
+        "gamma": 1.4,
+        "axial_velocity": 136,
+        "rpm": 10000,
+        "gas_constant": 287,
+        "mass_flow_rate": 4.374433141191892,
+        "pressure_ratio": 3,
+        "inlet_total_pressure": 101000,
+        "inlet_total_temperature": 288,
+        "isentropic_efficiency": 0.87848151,
+        "num_stages": 5,
+        "stage_temperature_rise": "equal",
+        "stage_reaction": [
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+        ],
+        "inlet_blockage": 0.0,
+        "outlet_blockage": 0.0,
+        "hub_to_tip_ratio": 0.5,
+        "num_streams": 9,
+        "aspect_ratio": {
+            "rotor": 3.0,
+            "stator": 3.25
+        },
+        "spacing_to_chord": {
+            "rotor": 1.0,
+            "stator": 1.0
+        },
+        "max_thickness_to_chord": {
+            "rotor": 0.1,
+            "stator": 0.1
+        },
+        "row_gap_to_chord": 0.25,
+        "stage_gap_to_chord": 0.5
+    }
 }
-

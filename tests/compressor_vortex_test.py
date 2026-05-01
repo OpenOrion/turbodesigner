@@ -15,11 +15,11 @@ class VelocityTriangleTest(unittest.TestCase):
         ctheta2_m = 235.6 * (0.5/.475)
         psi_m = (ctheta2_m - ctheta1_m) / Um
         vortex = FreeVortex(
-            Um=Um,               # m/s
-            Vm=cx,               # m/s
-            Rm=Rm,               # dimensionless
-            psi_m=psi_m,         # dimensionless
-            rm=rm                # m
+            mean_blade_velocity=Um,
+            meridional_velocity=cx,
+            mean_reaction=Rm,
+            mean_loading_coefficient=psi_m,
+            mean_radius=rm,
         )
 
         ctheta1_hub = vortex.ctheta(r=0.45, is_rotating=True)

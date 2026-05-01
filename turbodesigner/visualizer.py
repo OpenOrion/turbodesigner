@@ -1,7 +1,6 @@
 import numpy as np
 from turbodesigner.turbomachinery import Turbomachinery
 import plotly.graph_objects as go
-from IPython.display import Image, display
 
 
 class TurbomachineryVisualizer:
@@ -9,22 +8,22 @@ class TurbomachineryVisualizer:
     def visualize_annulus(turbomachinery: Turbomachinery, is_interactive=False):
         rotors = [
             np.array([
-                [(stage.stage_number-1.), stage.rotor.rt],
-                [(stage.stage_number-1.)+0.5, stage.stator.rt],
-                [(stage.stage_number-1.)+0.5, stage.stator.rh],
-                [(stage.stage_number-1.), stage.rotor.rh],
-                [(stage.stage_number-1.), stage.rotor.rt],
+                [(stage.stage_number-1.), stage.rotor.tip_radius],
+                [(stage.stage_number-1.)+0.5, stage.stator.tip_radius],
+                [(stage.stage_number-1.)+0.5, stage.stator.hub_radius],
+                [(stage.stage_number-1.), stage.rotor.hub_radius],
+                [(stage.stage_number-1.), stage.rotor.tip_radius],
             ])
             for stage in turbomachinery.stages
         ]
 
         stators = [
             np.array([
-                [(stage.stage_number-1.)+0.5, stage.stator.rt],
-                [stage.stage_number, (stage.next_stage.rotor if stage.next_stage else stage.stator).rt],
-                [stage.stage_number, (stage.next_stage.rotor if stage.next_stage else stage.stator).rh],
-                [(stage.stage_number-1.)+0.5, stage.stator.rh],
-                [(stage.stage_number-1.)+0.5, stage.stator.rt],
+                [(stage.stage_number-1.)+0.5, stage.stator.tip_radius],
+                [stage.stage_number, (stage.next_stage.rotor if stage.next_stage else stage.stator).tip_radius],
+                [stage.stage_number, (stage.next_stage.rotor if stage.next_stage else stage.stator).hub_radius],
+                [(stage.stage_number-1.)+0.5, stage.stator.hub_radius],
+                [(stage.stage_number-1.)+0.5, stage.stator.tip_radius],
             ])
             for stage in turbomachinery.stages
         ]
@@ -64,5 +63,13 @@ class TurbomachineryVisualizer:
         if is_interactive:
             fig.show()
         else:
-            image = Image(fig.to_image(format="png", width=800, height=500, scale=2))
-            display(image)
+            try:
+                from IPython import get_ipython
+                from IPython.display import Image, display
+                if get_ipython() is not None:
+                    image = Image(fig.to_image(format="png", width=800, height=500, scale=2))
+                    display(image)
+            except (ImportError, NameError):
+                pass
+
+        return fig

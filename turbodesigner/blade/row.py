@@ -1,289 +1,261 @@
-from enum import Enum
 from functools import cached_property
-from dataclasses import dataclass
 from typing import Literal, Optional
+import numpy as np
+import numpy.typing as npt
+from pydantic import BaseModel, ConfigDict, Field
 from turbodesigner.airfoils import AirfoilType, DCAAirfoil
 from turbodesigner.blade.metal_angle_methods.johnsen_bullock import JohnsenBullockMetalAngleMethod
 from turbodesigner.blade.metal_angles import MetalAngles
 from turbodesigner.blade.vortex.common import Vortex
 from turbodesigner.flow_station import FlowStation
 from turbodesigner.attachments.firetree import FirtreeAttachment
-import numpy as np
-import numpy.typing as npt
 from turbodesigner.units import MM
+
 MetalAngleMethods = Literal["EqualsFlowAngles", "JohnsenBullock"]
 
 
-@dataclass
-class BladeRowCadExport:
-    stage_number: int
-    "stage number"
+class BladeRowCadExport(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    disk_height: float
-    "disk height (mm)"
-
-    hub_radius: float
-    "blade hub radius (mm)"
-
-    tip_radius: float
-    "blade hub radius (mm)"
-
-    radii: npt.NDArray[np.float64]
-    "blade station radius (mm)"
-
-    airfoils: np.ndarray
-    "airfoil coordinates for each blade radius (mm)"
-
-    attachment: np.ndarray
-    "attachment coordinates (mm)"
-
-    attachment_with_tolerance: np.ndarray
-    "attachment coordinates (mm)"
-
-    attachment_height: float
-    "attachment height (mm)"
-
-    attachment_bottom_width: float
-    "attachment bottom width (mm)"
-
-    number_of_blades: int
-    "number of blades"
-
-    twist_angle: int
-    "twist angle of blade"
-
-    is_rotating: bool
-    "whether blade is rotating or not"
+    stage_number: int = Field(description="Stage number")
+    disk_height: float = Field(description="Disk height (mm)")
+    hub_radius: float = Field(description="Hub radius (mm)")
+    tip_radius: float = Field(description="Tip radius (mm)")
+    radii: npt.NDArray[np.float64] = Field(description="Blade station radii (mm)")
+    airfoils: np.ndarray = Field(description="Airfoil coordinates for each blade radius (mm)")
+    attachment: np.ndarray = Field(description="Attachment coordinates (mm)")
+    attachment_with_tolerance: np.ndarray = Field(description="Attachment coordinates with tolerance (mm)")
+    attachment_height: float = Field(description="Attachment height (mm)")
+    attachment_bottom_width: float = Field(description="Attachment bottom width (mm)")
+    number_of_blades: int = Field(description="Number of blades")
+    twist_angle: float = Field(description="Twist angle of blade (deg)")
+    is_rotating: bool = Field(description="Whether blade is rotating")
 
 
-@dataclass
-class BladeRow:
-    "calculates turbomachinery blade row"
+class BladeRow(BaseModel):
+    """Calculates turbomachinery blade row."""
+    model_config = ConfigDict(arbitrary_types_allowed=True, frozen=False)
 
-    stage_number: int
-    "stage number of blade row"
+    stage_number: int = Field(description="Stage number")
 
-    stage_flow_station: FlowStation
-    "blade stage flow station (FlowStation)"
+    stage_flow_station: FlowStation = Field(description="Stage flow station", exclude=True)
 
-    vortex: Vortex
-    "blade vortex calculation for stagger angles"
+    vortex: Vortex = Field(description="Vortex distribution", exclude=True)
 
-    AR: float
-    "aspect ratio (dimensionless)"
+    aspect_ratio: float = Field(description="Aspect ratio (dimensionless)")
 
-    sc: float
-    "spacing to chord ratio (dimensionless)"
+    spacing_to_chord: float = Field(description="Spacing to chord ratio (dimensionless)")
 
-    tbc: float
-    "max thickness to chord (dimensionless)"
+    max_thickness_to_chord: float = Field(description="Max thickness to chord (dimensionless)")
 
-    is_rotating: bool
-    "whether blade is rotating or not"
+    is_rotating: bool = Field(description="Whether blade is rotating")
 
-    N_stream: int
-    "number of streams per blade (dimensionless)"
+    num_streams: int = Field(description="Number of streams per blade (dimensionless)")
 
-    metal_angle_method: MetalAngleMethods
-    "metal angle method"
+    metal_angle_method: MetalAngleMethods = Field(description="Metal angle method")
 
-    next_stage_flow_station: Optional["FlowStation"] = None
-    "next blade row flow station"
+    next_stage_flow_station: Optional[FlowStation] = Field(default=None, description="Next stage flow station", exclude=True)
 
-    deviation_iterations: int = 20
-    "nominal deviation iterations"
+    deviation_iterations: int = Field(default=20, description="Nominal deviation iterations")
 
-    def __post_init__(self):
-        assert self.N_stream % 2 != 0, "N_stream must be an odd number"
+    def model_post_init(self, __context):
+        assert self.num_streams % 2 != 0, "num_streams must be an odd number"
         if self.is_rotating and self.next_stage_flow_station is None:
-            self.next_stage_flow_station = self.stage_flow_station.copyStream(
-                alpha=self.vortex.alpha(self.radii, is_rotating=False),
-                radius=self.radii
+            self.next_stage_flow_station = self.stage_flow_station.copy_stream(
+                flow_angle=self.vortex.alpha(self.radii, is_rotating=False),
+                radius=self.radii,
             )
 
     @cached_property
-    def rt(self):
-        "blade tip radius (m)"
+    def tip_radius(self) -> float:
+        """Blade tip radius (m)"""
         rt = self.stage_flow_station.outer_radius
         assert isinstance(rt, float)
         return rt
 
     @cached_property
-    def rh(self):
-        "blade hub radius (m)"
+    def hub_radius(self) -> float:
+        """Blade hub radius (m)"""
         rh = self.stage_flow_station.inner_radius
         assert isinstance(rh, float)
         return rh
 
     @cached_property
-    def rm(self):
-        "blade mean radius (m)"
+    def mean_radius(self) -> float:
+        """Blade mean radius (m)"""
         rm = self.stage_flow_station.radius
         assert isinstance(rm, float)
         return rm
 
     @cached_property
-    def h(self):
-        "height of blade (m)"
-        return self.rt-self.rh
+    def height(self) -> float:
+        """Blade height (m)"""
+        return float(self.tip_radius - self.hub_radius)
 
     @cached_property
-    def h_disk(self):
-        "disk height of blade row (m)"
-        xi = self.metal_angles.xi[0] if self.is_rotating else self.metal_angles.xi[-1]
-        return np.abs(self.c*np.cos(xi) * 1.25)
+    def disk_height(self) -> float:
+        """Disk height of blade row (m)"""
+        xi = self.metal_angles.stagger_angle[0] if self.is_rotating else self.metal_angles.stagger_angle[-1]
+        return float(np.abs(self.chord * np.cos(xi) * 1.25))
 
     @cached_property
-    def c(self):
-        "chord length (m)"
-        return self.h/self.AR
+    def chord(self) -> float:
+        """Chord length (m)"""
+        return float(self.height / self.aspect_ratio)
 
     @cached_property
-    def tb(self):
-        "blade max thickness (m)"
-        return self.tbc * self.c
+    def max_thickness(self) -> float:
+        """Max blade thickness (m)"""
+        return float(self.max_thickness_to_chord * self.chord)
 
     @cached_property
-    def Z(self):
-        "number of blades in row (dimensionless)"
-        Z = np.ceil(2*np.pi*self.rm/(self.sc*self.c))
+    def num_blades(self) -> int:
+        """Number of blades (dimensionless)"""
+        Z = np.ceil(2 * np.pi * self.mean_radius / (self.spacing_to_chord * self.chord))
         if not self.is_rotating and not Z % 2 == 0:
             Z -= 1
         return int(Z)
 
     @cached_property
-    def s(self):
-        "spacing between blades (m)"
-        return 2*np.pi*self.rh/self.Z
+    def spacing(self) -> float:
+        """Blade spacing (m)"""
+        return float(2 * np.pi * self.hub_radius / self.num_blades)
 
     @cached_property
-    def sh(self):
-        "spacing to height (dimensionless)"
-        return self.s/self.h
+    def spacing_to_height(self) -> float:
+        """Spacing to height ratio (dimensionless)"""
+        return float(self.spacing / self.height)
 
     @cached_property
-    def sigma(self):
-        "spacing between blades (dimensionless)"
-        return 1 / self.sc
+    def solidity(self) -> float:
+        """Solidity (dimensionless)"""
+        return float(1 / self.spacing_to_chord)
 
     @cached_property
-    def deHaller(self):
-        "deHaller factor (dimensionless)"
-        return self.next_flow_station.W / self.flow_station.W
+    def de_haller(self):
+        """De Haller number (dimensionless)"""
+        if self.is_rotating:
+            return self.next_flow_station.relative_velocity / self.flow_station.relative_velocity
+        return self.next_flow_station.absolute_velocity / self.flow_station.absolute_velocity
 
     @cached_property
-    def Re(self):
-        "Reynold's number of blade chord (dimensionless)"
-        return self.stage_flow_station.rho * self.stage_flow_station.Vm * (self.c / self.stage_flow_station.mu)
+    def reynolds_number(self) -> float:
+        """Reynolds number (dimensionless)"""
+        return float(self.stage_flow_station.density * self.stage_flow_station.meridional_velocity * (self.chord / self.stage_flow_station.dynamic_viscosity))
 
     @cached_property
     def airfoil_type(self):
-        # if self.stage_flow_station.MN < 0.7:
-        #     return AirfoilType.NACA65
-        # elif self.stage_flow_station.MN >= 0.7 and self.stage_flow_station.MN <= 1.20:
-        #     return AirfoilType.DCA
-        # raise ValueError("MN > 1.20 not currently supported")
-
         # TODO: only have support of DCA airfoil generation at the moment
         return AirfoilType.DCA
 
     @cached_property
-    def metal_angles(self):
+    def metal_angles(self) -> MetalAngles:
         if self.metal_angle_method == "JohnsenBullock":
-            # beta1_rm: float = np.median(self.beta1)  # type: ignore
-            # beta2_rm: float = np.median(self.beta2)  # type: ignore
-            method_angle_method = JohnsenBullockMetalAngleMethod(self.beta1, self.beta2, self.sigma, self.tbc, self.airfoil_type)
-            metal_angle_offset = method_angle_method.get_metal_angle_offset(self.deviation_iterations)
-            return MetalAngles(self.beta1, self.beta2, metal_angle_offset.i, metal_angle_offset.delta)
-        return MetalAngles(self.beta1, self.beta2, 0, 0)
+            method = JohnsenBullockMetalAngleMethod(
+                inlet_flow_angle=self.inlet_flow_angle,
+                outlet_flow_angle=self.outlet_flow_angle,
+                solidity=self.solidity,
+                max_thickness_to_chord=self.max_thickness_to_chord,
+                airfoil_type=self.airfoil_type,
+            )
+            offset = method.get_metal_angle_offset(self.deviation_iterations)
+            return MetalAngles(
+                inlet_flow_angle=self.inlet_flow_angle,
+                outlet_flow_angle=self.outlet_flow_angle,
+                incidence=offset.i,
+                deviation=offset.delta,
+            )
+        return MetalAngles(
+            inlet_flow_angle=self.inlet_flow_angle,
+            outlet_flow_angle=self.outlet_flow_angle,
+            incidence=0,
+            deviation=0,
+        )
 
     @cached_property
     def radii(self):
-        "blade radii (m)"
-        return np.linspace(self.rh, self.rt, self.N_stream, endpoint=True)
+        """Blade radii (m)"""
+        return np.linspace(self.hub_radius, self.tip_radius, self.num_streams, endpoint=True)
 
     @cached_property
-    def flow_station(self):
-        "flow station (FlowStation)"
-        return self.stage_flow_station.copyStream(
-            alpha=self.vortex.alpha(self.radii, self.is_rotating),
-            radius=self.radii
+    def flow_station(self) -> FlowStation:
+        """Flow station at this blade row (FlowStation)"""
+        return self.stage_flow_station.copy_stream(
+            flow_angle=self.vortex.alpha(self.radii, self.is_rotating),
+            radius=self.radii,
         )
 
     @cached_property
-    def next_flow_station(self):
-        "next flow station (FlowStation)"
+    def next_flow_station(self) -> FlowStation:
+        """Exit flow station for this blade row (FlowStation)"""
         assert self.next_stage_flow_station is not None
-        return self.next_stage_flow_station.copyStream(
-            alpha=self.vortex.alpha(self.radii, self.is_rotating),
-            radius=self.radii
+        return self.next_stage_flow_station.copy_stream(
+            flow_angle=self.vortex.alpha(self.radii, not self.is_rotating),
+            radius=self.radii,
         )
 
     @cached_property
-    def beta1(self):
-        "blade inlet flow angle (rad)"
+    def inlet_flow_angle(self):
+        """Blade inlet flow angle (rad)"""
         if self.is_rotating:
-            return self.flow_station.beta   # beta1
-        return self.flow_station.alpha      # alpha2
+            return self.flow_station.relative_flow_angle
+        return self.flow_station.flow_angle
 
     @cached_property
-    def beta2(self):
-        "blade outlet flow angle (rad)"
+    def outlet_flow_angle(self):
+        """Blade outlet flow angle (rad)"""
         if self.is_rotating:
             assert self.next_stage_flow_station is not None
-            return self.next_stage_flow_station.beta                      # beta2
-
-        assert self.next_stage_flow_station is not None or self.vortex.Rm == 0.5, "next_flow_station needs to be defined or Rc=0.5"
+            return self.next_stage_flow_station.relative_flow_angle
+        assert self.next_stage_flow_station is not None or self.vortex.mean_reaction == 0.5, "next_flow_station needs to be defined or Rc=0.5"
         if self.next_stage_flow_station is not None:
-            return self.next_stage_flow_station.alpha                                    # alpha3
-        return self.vortex.alpha(self.radii, is_rotating=not self.is_rotating)           # alpha3
+            return self.next_stage_flow_station.flow_angle
+        return self.vortex.alpha(self.radii, is_rotating=not self.is_rotating)
 
     @cached_property
-    def DF(self):
-        "diffusion factor (dimensionless)"
-        return 1-(np.cos(self.beta1)/np.cos(self.beta2))+(np.cos(self.beta1)/2)*self.sigma*(np.tan(self.beta1)-np.tan(self.beta2))
+    def diffusion_factor(self):
+        """Diffusion factor (dimensionless)"""
+        return 1 - (np.cos(self.inlet_flow_angle) / np.cos(self.outlet_flow_angle)) + (np.cos(self.inlet_flow_angle) / 2) * self.solidity * (np.tan(self.inlet_flow_angle) - np.tan(self.outlet_flow_angle))
 
     @cached_property
     def airfoils(self):
-        r0 = self.tb * 0.15
-        # TODO: optimize this with Numba
+        r0 = self.max_thickness * 0.15
         return [
-            DCAAirfoil(self.c, self.metal_angles.theta[i], r0, self.tb, self.metal_angles.xi[i])
-            for i in range(self.N_stream)
+            DCAAirfoil(self.chord, self.metal_angles.camber_angle[i], r0, self.max_thickness, self.metal_angles.stagger_angle[i])
+            for i in range(self.num_streams)
         ]
 
     @cached_property
-    def attachment(self):
-        max_length = 0.75*self.s if self.is_rotating else 1*self.s
-        attachment = FirtreeAttachment(
+    def attachment(self) -> FirtreeAttachment:
+        max_length = 0.75 * self.spacing if self.is_rotating else 1 * self.spacing
+        return FirtreeAttachment(
             gamma=np.radians(40),
             beta=np.radians(40),
-            ll=0.15*self.s,
-            lu=0.2*self.s,
-            Ri=0.05*self.s,
-            Ro=0.025*self.s,
-            R_dove=0.05*self.s,
+            ll=0.15 * self.spacing,
+            lu=0.2 * self.spacing,
+            Ri=0.05 * self.spacing,
+            Ro=0.025 * self.spacing,
+            R_dove=0.05 * self.spacing,
             max_length=max_length,
             num_stages=2,
-            disk_radius=self.rh,
-            tolerance=0.0006,  # m, 0.5 mm
-            include_top_arc=self.is_rotating
+            disk_radius=self.hub_radius,
+            tolerance=0.0006,
+            include_top_arc=self.is_rotating,
         )
-        return attachment
 
-    def to_cad_export(self):
+    def to_cad_export(self) -> BladeRowCadExport:
         return BladeRowCadExport(
             stage_number=self.stage_number,
-            disk_height=self.h_disk * MM,
-            hub_radius=self.rh * MM,
-            tip_radius=self.rt * MM,
+            disk_height=self.disk_height * MM,
+            hub_radius=self.hub_radius * MM,
+            tip_radius=self.tip_radius * MM,
             radii=self.radii * MM,
             airfoils=np.array([airfoil.get_coords() for airfoil in self.airfoils]) * MM,
             attachment=self.attachment.coords * MM,
             attachment_with_tolerance=self.attachment.coords_with_tolerance * MM,
             attachment_height=self.attachment.height * MM,
             attachment_bottom_width=self.attachment.bottom_width * MM,
-            number_of_blades=self.Z,
-            twist_angle=np.degrees(self.metal_angles.xi[-1]-self.metal_angles.xi[0]),
+            number_of_blades=self.num_blades,
+            twist_angle=np.degrees(self.metal_angles.stagger_angle[-1] - self.metal_angles.stagger_angle[0]),
             is_rotating=self.is_rotating,
         )

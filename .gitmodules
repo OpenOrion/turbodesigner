@@ -1,0 +1,6 @@
+[submodule "libs/jupyter-cadquery"]
+	path = libs/jupyter-cadquery
+	url = git@github.com:OpenOrion/jupyter-cadquery.git
+[submodule "libs/cq_warehouse"]
+	path = libs/cq_warehouse
+	url = git@github.com:OpenOrion/cq_warehouse.git

@@ -2,20 +2,14 @@ from dataclasses import dataclass, field
 from functools import cached_property
 import cadquery as cq
 import numpy as np
+from pydantic import BaseModel, Field
 from turbodesigner.blade.row import BladeRowCadExport
-from turbodesigner.cad.common import ExtendedWorkplane, FastenerPredicter
+from turbodesigner.cad.common import CadColors, ExtendedWorkplane, FastenerPredicter, colored_assembly
 
 
-@dataclass
-class BladeCadModelSpecification:
-    include_attachment: bool = True
-    "whether to include attachment (bool)"
-
-    screw_length_padding: float = 0.00
-    "screw length padding (dimensionless)"
-
-    fastener_diameter_to_attachment_bottom_width: float = 0.25
-    "blade attachment fastener to disk height (dimensionless)"
+class BladeCadModelSpecification(BaseModel):
+    screw_length_padding: float = Field(default=0.0, description="Screw length padding")
+    fastener_diameter_to_attachment_bottom_width: float = Field(default=0.25, description="Blade attachment fastener to disk height ratio")
 
 
 @dataclass
@@ -25,6 +19,9 @@ class BladeCadModel:
 
     spec: BladeCadModelSpecification = field(default_factory=BladeCadModelSpecification)
     "blade cad model specification"
+
+    is_complex: bool = False
+    "whether to include fastener geometry"
 
     @cached_property
     def lock_screw(self):
@@ -43,7 +40,7 @@ class BladeCadModel:
     @cached_property
     def blade_assembly(self):
         base_assembly = cq.Assembly()
-        fastener_assembly = cq.Assembly()
+        fastener_assembly = colored_assembly(CadColors.FASTENER)
 
         start_airfoil = self.blade_row.airfoils[0]
         airfoil_vertical_offset = np.array([
@@ -101,13 +98,13 @@ class BladeCadModel:
             .sweep(path, multisection=True, makeSolid=True)
         )
 
-        if self.spec.include_attachment:
+        if self.is_complex:
             blade_profile = (
                 blade_profile
                 .add(attachment_profile)
             )
 
-        base_assembly.add(blade_profile, name="Blade")
+        base_assembly.add(blade_profile, name="Blade", color=CadColors.BLADE)
         base_assembly.add(fastener_assembly, name="Fasteners")
 
         return base_assembly
