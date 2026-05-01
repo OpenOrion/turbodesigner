@@ -2,7 +2,12 @@
 TurboDesigner - The open-source turbomachinery designer
 """
 
-__version__ = "0.1.0"
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("turbodesigner")
+except PackageNotFoundError:
+    __version__ = "0.0.0"
 
 # Import main modules for easier access
 from turbodesigner.flow_station import FlowStation

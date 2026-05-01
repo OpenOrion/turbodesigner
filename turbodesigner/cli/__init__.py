@@ -32,7 +32,12 @@ class JsonFormatter:
         sys.exit(code)
 
 
-from turbodesigner import __version__
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    _version = version("turbodesigner")
+except PackageNotFoundError:
+    _version = "0.0.0"
 
 BANNER = "\b\n" + fr"""  _____              _              ____              _
  |_   _|_   _  _ __ | |__    ___   |  _ \   ___  ___ (_)  __ _  _ __    ___  _ __
@@ -42,7 +47,7 @@ BANNER = "\b\n" + fr"""  _____              _              ____              _
                                                          |___/
                          Turbomachinery Generation Framework
                               created by Open Orion, Inc.
-                                      v{__version__}
+                                      v{_version}
 """
 
 HELP_TEXT = BANNER + """
