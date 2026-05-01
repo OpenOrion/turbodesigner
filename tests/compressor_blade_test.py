@@ -4,9 +4,9 @@ from tests.designs import base_design
 
 class CompressorDesignTest(unittest.TestCase):
     def test_flow_angles(self):
-        alpha2 = base_design.stages[0].stator.flow_station.alpha
-        beta1 = base_design.stages[0].rotor.flow_station.beta
-        beta2 = base_design.stages[0].stator.flow_station.beta
+        alpha2 = base_design.stages[0].stator.flow_station.flow_angle
+        beta1 = base_design.stages[0].rotor.flow_station.relative_flow_angle
+        beta2 = base_design.stages[0].stator.flow_station.relative_flow_angle
 
         np.testing.assert_allclose(np.degrees(alpha2), np.array([33.89769494, 25.41478326, 20.1796603 ]))
         np.testing.assert_allclose(np.degrees(beta1), np.array([-50.78297859, -60.99475883, -67.28513168]))

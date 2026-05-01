@@ -10,7 +10,6 @@ from turbodesigner.stage import Stage
 from turbodesigner.turbomachinery import Turbomachinery
 from turbodesigner.units import MM, DEG, BAR
 from turbodesigner.visualizer import TurbomachineryVisualizer
-from turbodesigner.exporter import TurbomachineryExporter
 
 # Make these modules available at the package level
 __all__ = [
@@ -21,5 +20,4 @@ __all__ = [
     "DEG",
     "BAR",
     "TurbomachineryVisualizer",
-    "TurbomachineryExporter",
 ]

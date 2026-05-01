@@ -2,6 +2,51 @@
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "turbodesigner"
+version = "2.0.0"
+description = "An open-source turbomachinery designer"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.8"
+authors = [
+    { name = "Open Orion, Inc." },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+dependencies = [
+    "click>=8.3.3",
+    "kaleido>=0.2.1",
+    "plotly>=5.11.0",
+    "ipywidgets>=7.8.5",
+    "jupyterlab>=3.5.3",
+    "matplotlib>=3.10.9",
+    "numpy>=2.4.3",
+    "pydantic>=2.13.3",
+    "pandas>=3.0.2",
+    "cadquery>=2.5.2",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0"]
+
+[project.urls]
+Homepage = "https://github.com/OpenOrion/turbodesigner"
+
+[project.scripts]
+turbodesigner = "turbodesigner.cli:cli"
+
+[tool.setuptools.packages.find]
+include = ["turbodesigner*", "jupyter_cadquery*", "cq_warehouse*"]
+where = [".", "libs/jupyter-cadquery", "libs/cq_warehouse/src"]
+
+[tool.setuptools.package-data]
+turbodesigner = ["**/*.json"]
+
 [tool.black]
 line-length = 88
 target-version = ['py38']

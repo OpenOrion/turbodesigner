@@ -1,37 +1,36 @@
-from dataclasses import dataclass, field
+from functools import cached_property
 from typing import Union
 import numpy as np
-from turbodesigner.units import DEG
+from pydantic import BaseModel, ConfigDict, Field
 
-@dataclass
-class MetalAngles:
 
-    beta1: Union[float, np.ndarray]
-    "blade inlet flow angle (rad)"
+class MetalAngles(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    beta2: Union[float, np.ndarray]
-    "blade outlet flow angle (rad)"
+    inlet_flow_angle: Union[float, np.ndarray] = Field(description="Blade inlet flow angle (rad)")
 
-    i: Union[float, np.ndarray]
-    "blade incidence (rad)"
+    outlet_flow_angle: Union[float, np.ndarray] = Field(description="Blade outlet flow angle (rad)")
 
-    delta: Union[float, np.ndarray]
-    "blade deviation (rad)"
+    incidence: Union[float, np.ndarray] = Field(description="Blade incidence angle (rad)")
 
-    kappa1: np.ndarray = field(init=False) 
-    "inlet metal angle (rad)"
+    deviation: Union[float, np.ndarray] = Field(description="Blade deviation angle (rad)")
 
-    kappa2: np.ndarray = field(init=False) 
-    "outlet metal angle (rad)"
+    @cached_property
+    def inlet_metal_angle(self) -> np.ndarray:
+        """Inlet metal angle (rad)"""
+        return np.asarray(self.inlet_flow_angle - self.incidence)
 
-    theta: np.ndarray = field(init=False) 
-    "camber angle (rad)"
+    @cached_property
+    def outlet_metal_angle(self) -> np.ndarray:
+        """Outlet metal angle (rad)"""
+        return np.asarray(self.outlet_flow_angle - self.deviation)
 
-    xi: np.ndarray = field(init=False) 
-    "stagger angle (rad)"
+    @cached_property
+    def camber_angle(self) -> np.ndarray:
+        """Camber angle (rad)"""
+        return np.asarray(self.inlet_metal_angle - self.outlet_metal_angle)
 
-    def __post_init__(self):
-        self.kappa1 = np.asarray(self.beta1 - self.i)
-        self.kappa2 = np.asarray(self.beta2 - self.delta)
-        self.theta = np.asarray(self.kappa1-self.kappa2)
-        self.xi = np.asarray((self.kappa1 + self.kappa2)/2)
+    @cached_property
+    def stagger_angle(self) -> np.ndarray:
+        """Stagger angle (rad)"""
+        return np.asarray((self.inlet_metal_angle + self.outlet_metal_angle) / 2)

@@ -1,199 +1,177 @@
 from functools import cached_property
-from dataclasses import dataclass
 from typing import Optional
 import numpy as np
+from pydantic import BaseModel, ConfigDict, Field
 from turbodesigner.blade.row import BladeRow, BladeRowCadExport, MetalAngleMethods
 from turbodesigner.blade.vortex.free_vortex import FreeVortex
 from turbodesigner.flow_station import FlowStation
 from turbodesigner.units import MM
 
 
-@dataclass
-class StageBladeProperty:
-    rotor: float
-    stator: float
+class StageBladeProperty(BaseModel):
+    rotor: float = Field(description="Rotor value")
+    stator: float = Field(description="Stator value")
 
 
-@dataclass
-class StageCadExport:
-    rotor: BladeRowCadExport
-    "rotor blade row"
+class StageCadExport(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    stator: BladeRowCadExport
-    "stator blade row"
-
-    stage_height: float
-    "stage height (mm)"
-
-    stage_number: int
-    "stage number"
-
-    row_gap: float
-    "stage gap (mm)"
-
-    stage_gap: float
-    "stage gap (mm)"
+    rotor: BladeRowCadExport = Field(description="Rotor blade row CAD export")
+    stator: BladeRowCadExport = Field(description="Stator blade row CAD export")
+    stage_height: float = Field(description="Stage height (mm)")
+    stage_number: int = Field(description="Stage number")
+    row_gap: float = Field(description="Row gap (mm)")
+    stage_gap: float = Field(description="Stage gap (mm)")
 
 
-@dataclass
-class Stage:
-    "calculates turbomachinery stage"
+class Stage(BaseModel):
+    """Calculates turbomachinery stage."""
+    model_config = ConfigDict(arbitrary_types_allowed=True, frozen=False)
 
-    stage_number: int
-    "stage number"
+    stage_number: int = Field(description="Stage number")
 
-    Delta_Tt: float
-    "stage stagnation temperature change between inlet and outlet (K)"
+    temperature_rise: float = Field(description="Stage stagnation temperature rise (K)")
 
-    R: float
-    "stage reaction (dimensionless)"
+    reaction: float = Field(description="Stage reaction (dimensionless)")
 
-    previous_flow_station: FlowStation
-    "previous flow station (FlowStation)"
+    previous_flow_station: FlowStation = Field(description="Previous flow station", exclude=True)
 
-    eta_poly: float
-    "polytropic efficiency (dimensionless)"
+    polytropic_efficiency: float = Field(description="Polytropic efficiency (dimensionless)")
 
-    N_stream: int
-    "number of streams per blade (dimensionless)"
+    num_streams: int = Field(description="Number of streams per blade (dimensionless)")
 
-    AR: StageBladeProperty
-    "aspect ratio (dimensionless)"
+    aspect_ratio: StageBladeProperty = Field(description="Aspect ratio (dimensionless)")
 
-    sc: StageBladeProperty
-    "spacing to chord ratio (dimensionless)"
+    spacing_to_chord: StageBladeProperty = Field(description="Spacing to chord ratio (dimensionless)")
 
-    tbc: StageBladeProperty
-    "max thickness to chord (dimensionless)"
+    max_thickness_to_chord: StageBladeProperty = Field(description="Max thickness to chord (dimensionless)")
 
-    rgc: float
-    "row gap to chord (dimensionless)"
+    row_gap_to_chord: float = Field(description="Row gap to chord (dimensionless)")
 
-    sgc: float
-    "stage gap to chord (dimensionless)"
+    stage_gap_to_chord: float = Field(description="Stage gap to chord (dimensionless)")
 
-    metal_angle_method: MetalAngleMethods
-    "metal angle method"
+    metal_angle_method: MetalAngleMethods = Field(description="Metal angle method")
 
-    next_stage: Optional["Stage"] = None
-    "next turbomachinery stage"
-
-    def __post_init__(self):
-        assert isinstance(self.previous_flow_station.radius, float)
-        self.rm = self.previous_flow_station.radius
-        self.N = self.previous_flow_station.N
+    next_stage: Optional["Stage"] = Field(default=None, exclude=True)
 
     @cached_property
-    def Delta_ht(self) -> float:
-        "enthalpy change between inlet and outlet (J/kg)"
-        return self.Delta_Tt*self.previous_flow_station.Cp
+    def mean_radius(self) -> float:
+        """Mean radius (m)"""
+        r = self.previous_flow_station.radius
+        assert isinstance(r, float)
+        return r
 
     @cached_property
-    def U(self):
-        "mean blade velocity (m/s)"
-        U = FlowStation.calc_U(self.N, self.rm)
+    def enthalpy_rise(self) -> float:
+        """Enthalpy rise (J/kg)"""
+        return self.temperature_rise * self.previous_flow_station.specific_heat
+
+    @cached_property
+    def blade_velocity(self) -> float:
+        """Mean blade velocity (m/s)"""
+        U = FlowStation.calc_U(self.previous_flow_station.rpm, self.mean_radius)
         assert isinstance(U, float)
         return U
 
     @cached_property
-    def phi(self):
-        "flow coefficient (dimensionless)"
-        return self.previous_flow_station.Vm/self.U
+    def flow_coefficient(self) -> float:
+        """Flow coefficient (dimensionless)"""
+        return self.previous_flow_station.meridional_velocity / self.blade_velocity
 
     @cached_property
-    def psi(self):
-        "loading coefficient (dimensionless)"
-        return self.Delta_ht/self.U**2
+    def loading_coefficient(self) -> float:
+        """Loading coefficient (dimensionless)"""
+        return self.enthalpy_rise / self.blade_velocity**2
 
     @cached_property
-    def Tt2(self):
-        "outlet total temperature (K)"
-        return self.inlet_flow_station.Tt + self.Delta_Tt
+    def outlet_total_temperature(self) -> float:
+        """Outlet total temperature (K)"""
+        return float(self.inlet_flow_station.total_temperature + self.temperature_rise)
 
     @cached_property
-    def inlet_flow_station(self):
-        "mid flow station between rotor and stator (FlowStation)"
-        alpha1 = np.arctan((1 - self.R + -(1/2)*self.psi)/self.phi)
-        return self.previous_flow_station.copyFlow(
-            alpha=alpha1,
+    def inlet_flow_station(self) -> FlowStation:
+        """Inlet flow station (FlowStation)"""
+        alpha1 = np.arctan((1 - self.reaction + -(1/2) * self.loading_coefficient) / self.flow_coefficient)
+        return self.previous_flow_station.copy_flow(
+            flow_angle=alpha1,
         )
 
     @cached_property
-    def mid_flow_station(self):
-        "mid flow station between rotor and stator (FlowStation)"
-        alpha2 = np.arctan((1 - self.R + (1/2)*self.psi)/self.phi)
-        Pt2 = self.inlet_flow_station.Pt*self.PR
-        return self.inlet_flow_station.copyFlow(
-            Tt=self.Tt2,
-            Pt=Pt2,
-            alpha=alpha2,
+    def mid_flow_station(self) -> FlowStation:
+        """Mid flow station between rotor and stator (FlowStation)"""
+        alpha2 = np.arctan((1 - self.reaction + (1/2) * self.loading_coefficient) / self.flow_coefficient)
+        Pt2 = self.inlet_flow_station.total_pressure * self.pressure_ratio
+        return self.inlet_flow_station.copy_flow(
+            total_temperature=self.outlet_total_temperature,
+            total_pressure=Pt2,
+            flow_angle=alpha2,
         )
 
     @cached_property
-    def PR(self):
-        "pressure ratio (dimensionless)"
+    def pressure_ratio(self) -> float:
+        """Stage pressure ratio (dimensionless)"""
         gamma = self.inlet_flow_station.gamma
-        return self.TR**(self.eta_poly*gamma/(gamma - 1))
+        return float(self.temperature_ratio**(self.polytropic_efficiency * gamma / (gamma - 1)))
 
     @cached_property
-    def TR(self):
-        "stagnation temperature ratio between stage outlet and inlet (dimensionless)"
-        return self.Tt2/self.inlet_flow_station.Tt
+    def temperature_ratio(self) -> float:
+        """Stage temperature ratio (dimensionless)"""
+        return float(self.outlet_total_temperature / self.inlet_flow_station.total_temperature)
 
     @cached_property
-    def tau(self):
-        "torque transmitted to stage (N*m)"
-        return self.inlet_flow_station.mdot*self.rm*(self.mid_flow_station.Vtheta - self.inlet_flow_station.Vtheta)
+    def torque(self) -> float:
+        """Torque transmitted to stage (N*m)"""
+        return float(self.inlet_flow_station.mass_flow_rate * self.mean_radius * (self.mid_flow_station.tangential_velocity - self.inlet_flow_station.tangential_velocity))
 
     @cached_property
-    def vortex(self):
+    def vortex(self) -> FreeVortex:
         return FreeVortex(
-            Um=self.U,
-            Vm=self.previous_flow_station.Vm,
-            Rm=self.R,
-            psi_m=self.psi,
-            rm=self.rm
+            mean_blade_velocity=self.blade_velocity,
+            meridional_velocity=self.previous_flow_station.meridional_velocity,
+            mean_reaction=self.reaction,
+            mean_loading_coefficient=self.loading_coefficient,
+            mean_radius=self.mean_radius,
         )
 
     @cached_property
-    def rotor(self):
+    def rotor(self) -> BladeRow:
         return BladeRow(
             stage_number=self.stage_number,
             stage_flow_station=self.inlet_flow_station,
             vortex=self.vortex,
-            AR=self.AR.rotor,
-            sc=self.sc.rotor,
-            tbc=self.tbc.rotor,
+            aspect_ratio=self.aspect_ratio.rotor,
+            spacing_to_chord=self.spacing_to_chord.rotor,
+            max_thickness_to_chord=self.max_thickness_to_chord.rotor,
             is_rotating=True,
-            N_stream=self.N_stream,
+            num_streams=self.num_streams,
             metal_angle_method=self.metal_angle_method,
-            next_stage_flow_station=self.stator.flow_station
+            next_stage_flow_station=self.stator.flow_station,
         )
 
     @cached_property
-    def stator(self):
+    def stator(self) -> BladeRow:
         return BladeRow(
             stage_number=self.stage_number,
             stage_flow_station=self.mid_flow_station,
             vortex=self.vortex,
-            AR=self.AR.stator,
-            sc=self.sc.stator,
-            tbc=self.tbc.stator,
+            aspect_ratio=self.aspect_ratio.stator,
+            spacing_to_chord=self.spacing_to_chord.stator,
+            max_thickness_to_chord=self.max_thickness_to_chord.stator,
             is_rotating=False,
-            N_stream=self.N_stream,
+            num_streams=self.num_streams,
             metal_angle_method=self.metal_angle_method,
-            next_stage_flow_station=None if self.next_stage is None else self.next_stage.rotor.flow_station
+            next_stage_flow_station=None if self.next_stage is None else self.next_stage.rotor.flow_station,
         )
 
-    def to_cad_export(self):
+    def to_cad_export(self) -> StageCadExport:
         rotor = self.rotor.to_cad_export()
         stator = self.stator.to_cad_export()
-        stage_height = rotor.disk_height+stator.disk_height
+        stage_height = rotor.disk_height + stator.disk_height
         return StageCadExport(
             stage_number=self.stage_number,
             rotor=rotor,
             stator=stator,
             stage_height=stage_height,
-            stage_gap=self.sgc*self.rotor.c*MM,
-            row_gap=self.rgc*self.rotor.c*MM
+            stage_gap=self.stage_gap_to_chord * self.rotor.chord * MM,
+            row_gap=self.row_gap_to_chord * self.rotor.chord * MM,
         )

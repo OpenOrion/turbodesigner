@@ -1,14 +1,14 @@
 from functools import cached_property
-from dataclasses import dataclass
 from typing import Optional, Union
 import numpy as np
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 PROP_NON_STREAM_ERROR = "Property not allowed with streams"
 
 
 class FluidConstants:
     MU_REF = 1.73E-5
-    "reference dynamic viscocity at sea level ((N*s)/m**2)"
+    "reference dynamic viscosity at sea level ((N*s)/m**2)"
 
     PT_REF = 101325
     "reference pressure at sea level (Pa)"
@@ -20,263 +20,237 @@ class FluidConstants:
     "sutherland constant (K)"
 
 
-@dataclass
-class FlowStation:
-    "calculates flow station for an ideal gas"
+class FlowStation(BaseModel):
+    """Calculates flow station for an ideal gas."""
+    model_config = ConfigDict(arbitrary_types_allowed=True, frozen=False)
 
-    gamma: float = np.nan
-    "ratio of specific heats (dimensionless)"
+    gamma: float = Field(default=float('nan'), description="Ratio of specific heats (dimensionless)")
 
-    Rs: float = np.nan
-    "specific gas constant (J/(kg*K))"
+    gas_constant: float = Field(default=float('nan'), description="Specific gas constant (J/(kg*K))")
 
-    Tt: float = np.nan
-    "total temperature (K)"
+    total_temperature: float = Field(default=float('nan'), description="Total temperature (K)")
 
-    Pt: float = np.nan
-    "total pressure (Pa)"
+    total_pressure: float = Field(default=float('nan'), description="Total pressure (Pa)")
 
-    Vm: float = np.nan
-    "meridional flow velocity (m/s)"
+    meridional_velocity: float = Field(default=float('nan'), description="Meridional flow velocity (m/s)")
 
-    mdot: float = np.nan
-    "mass flow rate (kg/s)"
+    mass_flow_rate: float = Field(default=float('nan'), description="Mass flow rate (kg/s)")
 
-    B: float = 0.0
-    "blockage factor (dimensionless)"
+    blockage: float = Field(default=0.0, description="Blockage factor (dimensionless)")
 
-    alpha: Union[float, np.ndarray] = np.nan
-    "absolute flow angle (rad)"
+    flow_angle: Union[float, np.ndarray] = Field(default=float('nan'), description="Absolute flow angle (rad)")
 
-    N: float = np.nan
-    "rotational speed (rpm)"
+    rpm: float = Field(default=float('nan'), description="Rotational speed (rpm)")
 
-    radius: Union[float, np.ndarray] = np.nan
-    "flow radius (m)"
+    radius: Union[float, np.ndarray] = Field(default=float('nan'), description="Flow radius (m)")
 
-    mixture: str = "Air"
-    "mixture"
+    mixture: str = Field(default="Air", description="Gas mixture")
 
-    is_stream: bool = False
-    "whether station is 1D stream"
+    is_stream: bool = Field(default=False, description="Whether station is 1D stream")
 
-    def copyFlow(
+    def copy_flow(
         self,
-        Tt: Optional[float] = None,
-        Pt: Optional[float] = None,
-        Vm: Optional[float] = None,
-        mdot: Optional[float] = None,
-        alpha: Optional[Union[float, np.ndarray]] = None,
+        total_temperature: Optional[float] = None,
+        total_pressure: Optional[float] = None,
+        meridional_velocity: Optional[float] = None,
+        mass_flow_rate: Optional[float] = None,
+        flow_angle: Optional[Union[float, np.ndarray]] = None,
         radius: Optional[Union[float, np.ndarray]] = None,
-    ):
-        "copies all elements of FlowStation (FlowStation)"
+    ) -> "FlowStation":
+        """Copy all elements of FlowStation with optional overrides."""
         return FlowStation(
             gamma=self.gamma,
-            Rs=self.Rs,
-            Tt=self.Tt if Tt is None else Tt,
-            Pt=self.Pt if Pt is None else Pt,
-            Vm=self.Vm if Vm is None else Vm,
-            mdot=self.mdot if mdot is None else mdot,
-            B=self.B,
-            alpha=self.alpha if alpha is None else alpha,
-            N=self.N,
+            gas_constant=self.gas_constant,
+            total_temperature=self.total_temperature if total_temperature is None else total_temperature,
+            total_pressure=self.total_pressure if total_pressure is None else total_pressure,
+            meridional_velocity=self.meridional_velocity if meridional_velocity is None else meridional_velocity,
+            mass_flow_rate=self.mass_flow_rate if mass_flow_rate is None else mass_flow_rate,
+            blockage=self.blockage,
+            flow_angle=self.flow_angle if flow_angle is None else flow_angle,
+            rpm=self.rpm,
             radius=self.radius if radius is None else radius,
-            mixture=self.mixture
+            mixture=self.mixture,
         )
 
-    def copyStream(
+    def copy_stream(
         self,
-        alpha: Optional[Union[float, np.ndarray]] = None,
+        flow_angle: Optional[Union[float, np.ndarray]] = None,
         radius: Optional[Union[float, np.ndarray]] = None,
-    ):
-        """copies stream elements of FlowStation (FlowStation)
-
-           excludes:
-                * mdot - mass flow rate
-
-        """
+    ) -> "FlowStation":
+        """Copy stream elements (excludes mass flow rate)."""
         return FlowStation(
             gamma=self.gamma,
-            Rs=self.Rs,
-            Tt=self.Tt,
-            Pt=self.Pt,
-            Vm=self.Vm,
-            alpha=self.alpha if alpha is None else alpha,
-            N=self.N,
+            gas_constant=self.gas_constant,
+            total_temperature=self.total_temperature,
+            total_pressure=self.total_pressure,
+            meridional_velocity=self.meridional_velocity,
+            flow_angle=self.flow_angle if flow_angle is None else flow_angle,
+            rpm=self.rpm,
             radius=self.radius if radius is None else radius,
             is_stream=True,
-            mixture=self.mixture
+            mixture=self.mixture,
         )
 
     @cached_property
-    def h(self):
-        "static enthalpy (J/kg*K)"
-        return self.T*self.Cp
+    def static_enthalpy(self):
+        """Static enthalpy (J/kg)"""
+        return self.static_temperature * self.specific_heat
 
     @cached_property
-    def ht(self):
-        "total enthalpy (J/kg*K)"
-        return self.h + (self.V**2)/2
+    def total_enthalpy(self):
+        """Total enthalpy (J/kg)"""
+        return self.static_enthalpy + (self.absolute_velocity**2) / 2
 
     @cached_property
-    def Cp(self):
-        "specific heat at constant pressure (J/(kg*K))"
-        return self.Rs*self.gamma/(self.gamma - 1)
+    def specific_heat(self):
+        """Specific heat at constant pressure (J/(kg*K))"""
+        return self.gas_constant * self.gamma / (self.gamma - 1)
 
     @cached_property
-    def T(self):
-        "static temperature (K)"
-        return self.Tt - (self.V**2)/(2*self.Cp)
+    def static_temperature(self):
+        """Static temperature (K)"""
+        return self.total_temperature - (self.absolute_velocity**2) / (2 * self.specific_heat)
 
     @cached_property
-    def Ttr(self):
-        "total realtive temperature (K)"
-        return self.Tt + (self.W**2 - self.V**2)/(2*self.Cp)
+    def relative_total_temperature(self):
+        """Total relative temperature (K)"""
+        return self.total_temperature + (self.relative_velocity**2 - self.absolute_velocity**2) / (2 * self.specific_heat)
 
     @cached_property
-    def P(self):
-        "static pressure (Pa)"
-        return self.Pt*(self.T/self.Tt)**(self.gamma/(self.gamma - 1))
+    def static_pressure(self):
+        """Static pressure (Pa)"""
+        return self.total_pressure * (self.static_temperature / self.total_temperature)**(self.gamma / (self.gamma - 1))
 
     @cached_property
-    def Ptr(self):
-        "total relative pressure (Pa)"
-        return self.Pt*(self.Ttr/self.Tt)**(self.gamma/(self.gamma - 1))
+    def relative_total_pressure(self):
+        """Total relative pressure (Pa)"""
+        return self.total_pressure * (self.relative_total_temperature / self.total_temperature)**(self.gamma / (self.gamma - 1))
 
     @cached_property
-    def rho(self):
-        "density (kg/m**3)"
-        return self.P/(self.T*self.Rs)
+    def density(self):
+        """Density (kg/m**3)"""
+        return self.static_pressure / (self.static_temperature * self.gas_constant)
 
     @cached_property
-    def q(self):
-        "dynamic pressure (Pa)"
-        return 0.5*self.rho*self.Vm**2
+    def dynamic_pressure(self):
+        """Dynamic pressure (Pa)"""
+        return 0.5 * self.density * self.meridional_velocity**2
 
     @cached_property
-    def a(self):
-        "speed of sound in medium (m/s)"
-        return np.sqrt(self.T*self.Rs*self.gamma)
+    def speed_of_sound(self):
+        """Speed of sound (m/s)"""
+        return np.sqrt(self.static_temperature * self.gas_constant * self.gamma)
 
     @cached_property
-    def mu(self):
-        "dynamic velocity using Sutherland's formula ((N*s)/m**2)"
-        return FluidConstants.MU_REF * ((self.T / FluidConstants.T0_REF)**1.5) * ((FluidConstants.T0_REF + FluidConstants.C) / (self.T + FluidConstants.C))
+    def dynamic_viscosity(self):
+        """Dynamic viscosity using Sutherland's formula ((N*s)/m**2)"""
+        return FluidConstants.MU_REF * ((self.static_temperature / FluidConstants.T0_REF)**1.5) * ((FluidConstants.T0_REF + FluidConstants.C) / (self.static_temperature + FluidConstants.C))
 
     @cached_property
-    def MN(self):
-        "mach number (dimensionless)"
-        return self.Vm/self.a
+    def mach_number(self):
+        """Mach number (dimensionless)"""
+        return self.meridional_velocity / self.speed_of_sound
 
     @cached_property
-    def Vcr(self):
-        "critical velocity (m/s)"
-        return np.sqrt(((2*self.gamma)/(self.gamma+1)) * self.Rs*self.Tt)
+    def critical_velocity(self):
+        """Critical velocity (m/s)"""
+        return np.sqrt(((2 * self.gamma) / (self.gamma + 1)) * self.gas_constant * self.total_temperature)
 
     @cached_property
-    def U(self):
-        "blade velocity (m/s)"
-        return FlowStation.calc_U(self.N, self.radius)
+    def blade_velocity(self):
+        """Blade velocity (m/s)"""
+        return FlowStation.calc_U(self.rpm, self.radius)
 
     @cached_property
-    def omega(self):
-        "blade angular velocity (rad/s)"
-        return self.U/self.radius
+    def angular_velocity(self):
+        """Angular velocity (rad/s)"""
+        return self.blade_velocity / self.radius
 
     @cached_property
-    def Vtheta(self):
-        "absolute tangential velocity (m/s)"
-        return self.Vm*np.tan(self.alpha)
+    def tangential_velocity(self):
+        """Absolute tangential velocity (m/s)"""
+        return self.meridional_velocity * np.tan(self.flow_angle)
 
     @cached_property
-    def V(self):
-        "absolute flow velocity (m/s)"
-        if np.isnan(self.alpha).all():
-            return self.Vm
-        return self.Vm/np.cos(self.alpha)
+    def absolute_velocity(self):
+        """Absolute flow velocity (m/s)"""
+        if np.isnan(self.flow_angle).all():
+            return self.meridional_velocity
+        return self.meridional_velocity / np.cos(self.flow_angle)
 
     @cached_property
-    def Wtheta(self):
-        "relative tangential flow velocity (m/s)"
-        return self.Vtheta - self.U
+    def relative_tangential_velocity(self):
+        """Relative tangential flow velocity (m/s)"""
+        return self.tangential_velocity - self.blade_velocity
 
     @cached_property
-    def beta(self):
-        "relative flow angle (rad)"
-        return np.arctan(self.Wtheta/self.Vm)
+    def relative_flow_angle(self):
+        """Relative flow angle (rad)"""
+        return np.arctan(self.relative_tangential_velocity / self.meridional_velocity)
 
     @cached_property
-    def W(self):
-        "relative flow velocity (m/s)"
-        return self.Vm/np.cos(self.beta)
+    def relative_velocity(self):
+        """Relative flow velocity (m/s)"""
+        return self.meridional_velocity / np.cos(self.relative_flow_angle)
 
-    # %% Annular Properties
+    # Annular Properties
     @cached_property
-    def A_flow(self):
-        "cross-sectional flow area (m**2)"
+    def flow_area(self):
+        """Cross-sectional flow area (m**2)"""
         assert not self.is_stream, PROP_NON_STREAM_ERROR
-        return self.mdot/(self.rho*self.Vm)
+        return self.mass_flow_rate / (self.density * self.meridional_velocity)
 
     @cached_property
-    def A_phys(self):
-        "physical cross sectional area (m**2)"
-        return self.A_flow*(self.B + 1)
+    def physical_area(self):
+        """Physical cross-sectional area (m**2)"""
+        return self.flow_area * (self.blockage + 1)
 
     @cached_property
     def outer_radius(self):
-        "flow outer radius (m)"
+        """Flow outer radius (m)"""
         assert not self.is_stream, PROP_NON_STREAM_ERROR
-        return self.A_phys/(4*np.pi*self.radius) + self.radius
+        return self.physical_area / (4 * np.pi * self.radius) + self.radius
 
     @cached_property
     def inner_radius(self):
-        "flow inner radius (m)"
+        """Flow inner radius (m)"""
         assert not self.is_stream, PROP_NON_STREAM_ERROR
-        return 2*self.radius - self.outer_radius
+        return 2 * self.radius - self.outer_radius
 
     @staticmethod
     def calc_radius_from_ht(ht: float, A_phys: Union[float, np.ndarray]):
-        """calculates radius from hub to tip ratio
+        """Calculate radius from hub-to-tip ratio.
 
         Parameters
-        ==========
-
-        ht: float
-            hub to tip ratio (dimensionless)
-
-        A_phys: float
-            physical cross sectional area (m**2)
-
+        ----------
+        ht : float
+            Hub-to-tip ratio (dimensionless)
+        A_phys : float
+            Physical cross-sectional area (m**2)
         """
-
-        outer_radius = np.sqrt(A_phys / (np.pi*(1-ht**2)))
+        outer_radius = np.sqrt(A_phys / (np.pi * (1 - ht**2)))
         inner_radius = ht * outer_radius
         return (outer_radius + inner_radius) / 2
 
     @staticmethod
     def calc_U(N: float, radius: Union[float, np.ndarray]):
-        """calculates blade velocity
+        """Calculate blade velocity.
 
         Parameters
-        ==========
-
-        N: float
-            rotational speed (rpm)
-
-        radius: float
-            blade radius (m)
-
+        ----------
+        N : float
+            Rotational speed (rpm)
+        radius : float
+            Blade radius (m)
         """
-
-        return 2*np.pi*N*radius/60
+        return 2 * np.pi * N * radius / 60
 
     def set_radius(self, ht: float):
-        """sets radius from hub to tip ratio
+        """Set radius from hub-to-tip ratio.
 
         Parameters
-        ==========
-
-        ht: float
-            hub to tip ratio (dimensionless)
+        ----------
+        ht : float
+            Hub-to-tip ratio (dimensionless)
         """
-        self.radius = FlowStation.calc_radius_from_ht(ht, self.A_phys)
+        self.radius = FlowStation.calc_radius_from_ht(ht, self.physical_area)
