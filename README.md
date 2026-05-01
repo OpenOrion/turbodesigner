@@ -56,12 +56,29 @@ Currently focused on **axial compressors**, with plans to support axial turbines
 pip install turbodesigner
 ```
 
+### CAD Geometry Support
+
+CAD commands (`turbodesigner cad ...`) require CadQuery, which depends on the OpenCASCADE kernel. If your system already has a compatible CadQuery installed, add it as an extra:
+
+```bash
+pip install "turbodesigner[cq]"
+```
+
+Otherwise, install CadQuery via conda first (recommended — handles the native OCC dependency):
+
+```bash
+# Install CadQuery (required for CAD geometry support)
+conda install -c conda-forge -c cadquery cadquery=master
+
+pip install turbodesigner
+```
+
 ### Development Setup
 
 ```bash
 git clone --recurse-submodules https://github.com/OpenOrion/turbodesigner.git
 cd turbodesigner
-pip install -e ".[test]"
+pip install -e ".[test,cq]"
 ```
 
 ## Design Input

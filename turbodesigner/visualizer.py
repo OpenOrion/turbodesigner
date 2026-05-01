@@ -1,7 +1,6 @@
 import numpy as np
 from turbodesigner.turbomachinery import Turbomachinery
 import plotly.graph_objects as go
-from IPython.display import Image, display
 
 
 class TurbomachineryVisualizer:
@@ -66,6 +65,7 @@ class TurbomachineryVisualizer:
         else:
             try:
                 from IPython import get_ipython
+                from IPython.display import Image, display
                 if get_ipython() is not None:
                     image = Image(fig.to_image(format="png", width=800, height=500, scale=2))
                     display(image)
