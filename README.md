@@ -28,8 +28,17 @@ Currently focused on **axial compressors**, with plans to support axial turbines
 | `FlowStation` | Thermodynamic state at a station: total/static T & P, velocity triangles, Mach number, density |
 | `BladeRow` | Blade row geometry: aspect ratio, solidity, metal angles, airfoil profiles at multiple span stations |
 | `Vortex` | Spanwise velocity distribution (currently Free Vortex: $r \cdot c_\theta = \text{const}$) |
-| `MetalAngles` | Incidence and deviation via Johnsen-Bullock or equals-flow-angles methods |
-| `AxialCompressorCadModel` | Full CAD assembly: shaft, casing, blades built in parallel via CadQuery |
+| `MetalAngles` | Blade metal angle data: incidence, deviation, camber, and stagger (computed by Johnsen-Bullock or equals-flow-angles methods) |
+
+### CAD Modules
+
+| Module | Description |
+|--------|-------------|
+| `AxialCompressorCadModel` | Full CAD assembly orchestrator: builds shaft + casing in parallel via multiprocessing |
+| `ShaftCadModel` | Shaft/disk stage geometry: rotor disk, blade slots, stage-connect fastener holes |
+| `CasingCadModel` | Outer casing stage geometry: casing shell, stator blade slots, clamp fastener holes |
+| `BladeCadModel` | Single blade row: lofted 3D airfoil with optional fir-tree root attachment |
+| `BillOfMaterials` | Part list generation: fasteners, blades, disks, casings with quantities per stage |
 
 
 ## Features
@@ -89,7 +98,7 @@ Designs are defined as JSON files with the following structure:
 {
   "machine_type": "axial",
   "configuration": "compressor",
-  "meanline": {
+  "definition": {
     "gamma": 1.4,
     "axial_velocity": 136,
     "rpm": 10000,
@@ -123,28 +132,33 @@ TurboDesigner includes a Click-based CLI for design management, analysis, and CA
 
 ```bash
 # Design management
-turbodesigner design create <name> --from <json>
-turbodesigner design list
-turbodesigner design show <name>
-turbodesigner design export <name>
-turbodesigner design schema          # Print the JSON schema
+turbodesigner axial compressor design create <name> --from <json>
+turbodesigner axial compressor design list
+turbodesigner axial compressor design show <name>
+turbodesigner axial compressor design export <name> <path>
+turbodesigner axial compressor design schema          # Print the JSON schema
+turbodesigner axial compressor design report           # Generate analysis report
 
-# Analysis (requires an active design via `turbodesigner design use <name>`)
-turbodesigner analyze machine        # Overall machine parameters
-turbodesigner analyze stages         # Stage-by-stage summary
-turbodesigner analyze flow-stations  # All flow station properties
-turbodesigner analyze blade-rows     # Blade geometry per row
-turbodesigner analyze full           # Full JSON dump with unit metadata
+# Analysis (requires an active design via `design use <name>`)
+turbodesigner axial compressor analyze machine         # Overall machine parameters
+turbodesigner axial compressor analyze stages          # Stage-by-stage summary
+turbodesigner axial compressor analyze flow-stations   # All flow station properties
+turbodesigner axial compressor analyze blade-rows      # Blade geometry per row
 
 # CAD generation
-turbodesigner cad blade              # Single blade profile
-turbodesigner cad shaft              # Shaft/disk assembly
-turbodesigner cad casing             # Outer casing
-turbodesigner cad assembly           # Full compressor assembly
-turbodesigner cad annulus            # Flow annulus visualization
+turbodesigner axial compressor cad blade <N> <rotor|stator>  # Single blade row
+turbodesigner axial compressor cad shaft               # Shaft/disk assembly
+turbodesigner axial compressor cad casing              # Outer casing
+turbodesigner axial compressor cad assembly            # Full compressor assembly
+turbodesigner axial compressor cad annulus             # Flow annulus visualization
 ```
 
-All commands support `--json` for structured output. CAD commands accept `--complex` (high-fidelity geometry) and `--visualize` flags.
+The `--json` flag goes on the **root** command for structured output:
+```bash
+turbodesigner --json axial compressor analyze machine
+```
+
+CAD commands accept `--complex` (high-fidelity geometry with fasteners) and `--no-visualize` (visualization is on by default).
 
 Workspace state is persisted in a `.turbodesigner/` directory (similar to `.git`).
 
@@ -158,17 +172,17 @@ TurboDesigner generates the following artifacts in `.turbodesigner/designs/<name
 | `casing-stage-{N}.step` | STEP file for each casing stage |
 | `blade-{N}-rotor.step` | Individual rotor blade STEP file |
 | `blade-{N}-stator.step` | Individual stator blade STEP file |
-| `BOM.csv` | Bill of materials (generated with `--complex`) |
+| `BOM.csv` | Bill of materials (generated during `cad assembly`) |
 | `report.ipynb` | Jupyter notebook with full design analysis |
 | `report.html` | HTML export of the analysis report |
 
 ### BOM.csv
 
-Generated during `cad assembly --complex`. Columns: `Part`, `Quantity`, `Category`, `Component`. Includes all fasteners (heatsets, screws), blades, shaft disks, casing sections, and clamps with per-stage quantities.
+Generated during `cad assembly`. Columns: `Part`, `Quantity`, `Category`, `Component`. Includes all fasteners (heatsets, screws), blades, shaft disks, casing sections, and clamps with per-stage quantities.
 
 ### Reports
 
-Generated via `turbodesigner axial compressor design report`. Produces a Jupyter notebook and HTML report containing:
+Generated via `turbodesigner axial compressor design report <name>`. Produces a Jupyter notebook and HTML report containing:
 
 - Machine overview (pressure ratio, efficiency, RPM)
 - Stage-by-stage thermodynamic properties
