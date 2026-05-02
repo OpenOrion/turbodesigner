@@ -44,7 +44,7 @@ Currently focused on **axial compressors**, with plans to support axial turbines
 ## Features
 
 - **Vortex methods:** Free Vortex (constant work distribution)
-- **Airfoil types:** NACA 65 series, Double Circular Arc (DCA/C4)
+- **Airfoil types:** Double Circular Arc
 - **Deviation models:** Johnsen-Bullock empirical correlation, zero-deviation (metal = flow angles)
 - **CAD generation:** Lofted 3D blades, shaft/disk, outer casing with clamps, fir-tree blade root attachments
 - **Parallel CAD builds:** Multiprocessing with tessellation caching for fast iteration
@@ -223,7 +223,7 @@ print("Casing STEP files:", results["casing"])
 ## Running Tests
 
 ```bash
-pip install -e ".[test]"
+pip install -e ".[test,cq]"
 python -m pytest tests/ -v
 ```
 
@@ -234,8 +234,6 @@ Contributions are welcome in the following areas:
 - Verifying thermodynamic calculations against published data
 - CFD validation of generated geometries
 - Additional vortex distributions (forced vortex, exponential)
-- More airfoil families (NACA 4-digit, custom profiles)
 - Axial turbine support
-- GUI/web interface
 
 Join the [Discord](https://discord.gg/H7qRauGkQ6) for collaboration
