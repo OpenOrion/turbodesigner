@@ -167,23 +167,33 @@ class Turbomachinery(BaseModel):
 
         previous_flow_station = self.inlet_flow_station
         stages: list[Stage] = []
-        for i in range(self.num_stages):
+        
+        n = self.num_stages
+        temperature_rises = self.stage_temperature_rise if isinstance(self.stage_temperature_rise, list) else [self.overall_temperature_rise / n] * n
+        reactions = self.stage_reaction if isinstance(self.stage_reaction, list) else [self.stage_reaction] * n
+        aspect_ratios = self.aspect_ratio if isinstance(self.aspect_ratio, list) else [self.aspect_ratio] * n
+        spacings = self.spacing_to_chord if isinstance(self.spacing_to_chord, list) else [self.spacing_to_chord] * n
+        thicknesses = self.max_thickness_to_chord if isinstance(self.max_thickness_to_chord, list) else [self.max_thickness_to_chord] * n
+        row_gaps = self.row_gap_to_chord if isinstance(self.row_gap_to_chord, list) else [self.row_gap_to_chord] * n
+        stage_gaps = self.stage_gap_to_chord if isinstance(self.stage_gap_to_chord, list) else [self.stage_gap_to_chord] * n
+
+        for i in range(n):
             stage = Stage(
                 stage_number=i + 1,
-                temperature_rise=self.stage_temperature_rise[i] if isinstance(self.stage_temperature_rise, list) else self.overall_temperature_rise / self.num_stages,
-                reaction=self.stage_reaction[i] if isinstance(self.stage_reaction, list) else self.stage_reaction,
+                temperature_rise=temperature_rises[i],
+                reaction=reactions[i],
                 previous_flow_station=previous_flow_station,
                 polytropic_efficiency=self.polytropic_efficiency,
                 num_streams=self.num_streams,
-                aspect_ratio=self.aspect_ratio[i] if isinstance(self.aspect_ratio, list) else self.aspect_ratio,
-                spacing_to_chord=self.spacing_to_chord[i] if isinstance(self.spacing_to_chord, list) else self.spacing_to_chord,
-                max_thickness_to_chord=self.max_thickness_to_chord[i] if isinstance(self.max_thickness_to_chord, list) else self.max_thickness_to_chord,
-                row_gap_to_chord=self.row_gap_to_chord[i] if isinstance(self.row_gap_to_chord, list) else self.row_gap_to_chord,
-                stage_gap_to_chord=self.stage_gap_to_chord[i] if isinstance(self.stage_gap_to_chord, list) else self.stage_gap_to_chord,
+                aspect_ratio=aspect_ratios[i],
+                spacing_to_chord=spacings[i],
+                max_thickness_to_chord=thicknesses[i],
+                row_gap_to_chord=row_gaps[i],
+                stage_gap_to_chord=stage_gaps[i],
                 metal_angle_method=self.metal_angle_method,
             )
             previous_flow_station = stage.mid_flow_station
-            if i > 0 and i < self.num_stages:
+            if i > 0 and i < n:
                 stages[i - 1].next_stage = stage
             stages.append(stage)
 
